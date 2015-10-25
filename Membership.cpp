@@ -413,7 +413,7 @@ void Membership::detectThread()
     while(!killDetectingThread)
     {
   
-        roundId++;
+        roundId = (roundId+1)%255;
 
         if (roundId % 5 == 0)
         {
