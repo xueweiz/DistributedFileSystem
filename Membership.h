@@ -64,7 +64,6 @@ private:
 
 	int myTimeStamp;
 	std::string my_ip_str;
-	char myAddr[4];
 
 	std::vector<Message> msgQueue;
 	std::mutex msgQueueLock;
@@ -109,10 +108,10 @@ private:
 	void electionMsg ( Message msg, std::string sender ); // Update the leader, replay ok.
 	void bullyMsg 	 ( Message msg, std::string sender );
 	void newLeaderMsg( Message msg, std::string sender );
-
+	bool isBiggerThanMine(std::string other, std::string mine);
 
 	//Membership modifiers methods
-	int addMember(char * carrierAdd, int timeStamp); //if already exist, return 1. else return 0
+	int addMember  (std::string newMember, int timeStamp); //if already exist, return 1. else return 0
 	int checkMember(std::string ip_str); //check IP
 	int checkMember(std::string ip_str, int timeStamp); //check IP + timeStamp
 	int failMember(std::string ip_str, int timeStamp); //if already failed, return 1. else return 0

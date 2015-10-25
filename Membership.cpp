@@ -133,10 +133,9 @@ bool Membership::firstJoin()
     //set my own addr, ip, timeStamp, roundID
     myTimeStamp = time(NULL);
     my_ip_str = getOwnIPAddr();
-    ipString2Char4(my_ip_str, myAddr);
     
     //now I have my self as member
-    addMember( myAddr, myTimeStamp );
+    addMember( my_ip_str, myTimeStamp );
 
     bool joined = false;
 
@@ -144,11 +143,8 @@ bool Membership::firstJoin()
     msg.type = MSG_JOIN;
     msg.roundId = -1;
 
-    memcpy(msg.carrierAdd, myAddr, 4);
-    // for(int i=0; i < 4; i++)
-    // {
-    //     msg.carrierAdd[i] = myAddr[i];
-    // }
+    ipString2Char4(my_ip_str, msg.carrierAdd);
+
     msg.timeStamp = myTimeStamp;
     msg.TTL = isIntroducer;	//used to distinguish joining node is Introducer or not
 
@@ -156,11 +152,11 @@ bool Membership::firstJoin()
         int connectionToServer;
         //TCP connect to introducer/other nodes
         std::cout<<"Join: Connecting to "<< nodes[i].ip_str << "..." << std::endl;
-        logFile  <<"Join: Connecting to "<< nodes[i].ip_str << "..." << std::endl;
+
         int ret = connect_to_server(nodes[i].ip_str.c_str(), port + 1, &connectionToServer);
         if(ret!=0)
         {
-            std::cout<<"Join: Cannot connect to "<<nodes[i].ip_str<< std::endl;
+
             logFile <<"ERROR Join: Cannot connect to "<<nodes[i].ip_str<< std::endl;
             if(!isIntroducer){
             	i--;
@@ -181,13 +177,13 @@ bool Membership::firstJoin()
             int j=0;
             for(j=0; j < size; j++){
                 read(connectionToServer, msgs + j, sizeof(Message));
-                logFile<<"FirstJoin: received "<<getSenderIP(msgs[j].carrierAdd)<<" "<<msgs[j].timeStamp<< std::endl;
+                logFile<<"FirstJoin: received "<<char42String(msgs[j].carrierAdd)<<" "<<msgs[j].timeStamp<< std::endl;
             }
 
             if(j == size){
                 joined = true;
                 for(j=0; j < size; j++)
-                	addMember(msgs[j].carrierAdd, msgs[j].timeStamp);
+                	addMember(char42String(msgs[j].carrierAdd), msgs[j].timeStamp);
             }
             else{
                 std::cout << "Join: Failed downloading nodes list"<< std::endl;
@@ -232,7 +228,7 @@ void Membership::forJoinThread(){ // Will run only in the introducer
         		sendBackLocalList(connFd);
         	}
         	//no matter what is the joining node, join it
-        	addMember(income.carrierAdd, income.timeStamp);
+        	addMember(char42String(income.carrierAdd), income.timeStamp);
         }
         else{	//this node is an introducer
 
@@ -240,7 +236,7 @@ void Membership::forJoinThread(){ // Will run only in the introducer
         	sendBackLocalList(connFd);
         	
         	//add carrier node
-        	addMember(income.carrierAdd, income.timeStamp);
+        	addMember(char42String(income.carrierAdd), income.timeStamp);
         	
         	usleep( 10*1000 );	//wait to make sure last joined member has enough time to open TCP listening port
 
@@ -309,7 +305,7 @@ int Membership::sendBackLocalList(int connFd){
 
     for(int i=0; i < size; i++){
     	ret = write(connFd, buffer+i, sizeof(Message) );
-    	logFile<<"sendBackLocalList: sending "<<getSenderIP(buffer[i].carrierAdd)<<" "<<buffer[i].timeStamp<< std::endl;
+    	logFile<<"sendBackLocalList: sending "<<char42String(buffer[i].carrierAdd)<<" "<<buffer[i].timeStamp<< std::endl;
     }
     delete [] buffer;
     return 0;
@@ -333,7 +329,7 @@ void Membership::listeningThread()
         int byte_count = receiveUDP(sockfd, (char*)&msg, sizeof(msg), sender);
 
         logFile << "listeningThread: Receive message from: " << sender.c_str() << " ";
-        logFile << msg.type << " " << (int)msg.TTL << std::endl;
+        logFile << "type: " << msg.type << "ttl: " << (int)msg.TTL << std::endl;
 
         if (byte_count != sizeof(msg))
         {
@@ -419,13 +415,12 @@ void Membership::detectThread()
   
         roundId++;
 
-        if (roundId % 10 == 0)
+        if (roundId % 5 == 0)
         {
         	checkLeader();
         }
 
         logFile<< std::endl << "Detection Thread - Round: "<< roundId << " ------------" << std::endl;
-        //std::cout<< std::endl << "Detection Thread - Round: "<< roundId << " ------------" << time(NULL) << std::endl;
         logFile<<printMember();
         
         if(members.size() < 2)
@@ -468,13 +463,12 @@ void Membership::detectThread()
         static int count = 0;
         if(acked){
             logFile<<"detectThread: node alive: "<<theNode.ip_str<<" "<<theNode.timeStamp<<std::endl;
-            //std::cout<<"detectThread: node alive: "<<theNode.ip_str<<" "<<count++ << std::endl;
             flagFail = false;
             usleep(4 * MAX_LATENCY);     
             continue;       
         }
 
-        //std::cout<<"Hey!!! Node "<<theNode.ip_str<<" did not respond the first time!" << std::endl;
+        logFile<<"Hey!!! Node "<<theNode.ip_str<<" did not respond the first time!" << std::endl;
 
         msg.type = MSG_PIGGY;
         msg.TTL = 0;
@@ -487,18 +481,15 @@ void Membership::detectThread()
 
         if(acked){
             logFile<<"detectThread: second round found node alive: "<<theNode.ip_str<<" "<<theNode.timeStamp<<std::endl;
-            //std::cout <<"detectThread: second round found node alive: "<<theNode.ip_str<<" "<<theNode.timeStamp<<std::endl;
             flagFail = false;
             continue;
         }
         else{
-            //logFile<<"detectThread: node failed: "<<theNode.ip_str<<" "<<theNode.timeStamp<<std::endl;
-            //std::cout<< "detectThread: No ack received: node failed: "<<theNode.ip_str<<" "<<theNode.timeStamp<<std::endl;
+            logFile<< "detectThread: No ack received: node failed: "<<theNode.ip_str<<" "<<theNode.timeStamp<<std::endl;
             
             if (flagFail == true)
             {
                 logFile<< "detectThread: No ack received: node failed: "<<theNode.ip_str<<" "<<theNode.timeStamp<<std::endl;
-                //std::cout<< "detectThread: No ack received: node failed: "<<theNode.ip_str<<" "<<theNode.timeStamp<<std::endl;
                 failMember(theNode.ip_str, theNode.timeStamp);
 
                 Message failMsg;
@@ -513,7 +504,6 @@ void Membership::detectThread()
             }
             else
             {
-                //std::cout<< "detectThread: Robust 2: It is alive: "<<theNode.ip_str<<" "<<theNode.timeStamp<<std::endl;
                 logFile<< "detectThread: Robust 2: It is alive: "<<theNode.ip_str<<" "<<theNode.timeStamp<<std::endl;
                 failedNode = theNode;
                 flagFail = true;
@@ -543,14 +533,13 @@ void Membership::joinMsg( Message msg, std::string sender ){
 */
 void Membership::leaveMsg( Message msg, std::string sender )
 {
-    std::string carrier = getSenderIP(msg.carrierAdd);
+    std::string carrier = char42String(msg.carrierAdd);
 
     if ( !checkMember(carrier) ) return; // Already deleted
 
 	failMember(carrier, msg.timeStamp);
     
     logFile<<"leaveMsg: node "<<carrier<<" has left"<<std::endl;
-    //std::cout<<"leaveMsg: node "<<carrier<<" has left"<<std::endl;
 
     if(msg.TTL == 0)
     {
@@ -570,7 +559,7 @@ void Membership::leaveMsg( Message msg, std::string sender )
 */
 void Membership::failMsg( Message msg, std::string sender )
 {
-	std::string carrier = getSenderIP(msg.carrierAdd);
+	std::string carrier = char42String(msg.carrierAdd);
 /*
     if ( my_ip_str.compare(carrier) == 0) // THIS IS MY! I NEED TO REJOIN
     {
@@ -589,8 +578,7 @@ void Membership::failMsg( Message msg, std::string sender )
     }
 */
     failMember(carrier, msg.timeStamp);
-    logFile<<"failMsg: node "<<carrier<<" failed"<< std::endl;
-	//std::cout<<"failMsg: node "<<carrier<<" failed acording to " << sender << std::endl;
+	logFile<<"failMsg: node "<<carrier<<" failed acording to " << sender << std::endl;
 /*
     int select = rand()%10;
 
@@ -630,31 +618,31 @@ void Membership::ackMsg( Message msg, std::string sender )
 
 void Membership::piggyMsg( Message msg, std::string sender )
 {
-    std::string target = getSenderIP(msg.carrierAdd);
+    std::string target = char42String(msg.carrierAdd);
     msg.type = MSG_PIGGY_PING;
 
     ipString2Char4(sender, msg.carrierAdd); //Original Sender as carrier
 
     sendUDP( sockfd,  target, port, (char*)&msg, sizeof(Message) );
-    //std::cout << "Weired!: " << sender << " says that " << target << " did not responde..." << std::endl;
+    logFile << "Weired!: " << sender << " says that " << target << " did not responde..." << std::endl;
 }
 
 void Membership::piggyPingMsg( Message msg, std::string sender )
 {
     msg.type = MSG_PIGGY_ACK;
-    //ipString2Char4(getSenderIP(msg.carrierAdd), msg.carrierAdd); //Original Sender as carrier
+    //ipString2Char4(char42String(msg.carrierAdd), msg.carrierAdd); //Original Sender as carrier
     sendUDP( sockfd,  sender, port, (char*)&msg, sizeof(Message) );
 
     //Just in case, we can send the message back to the original sender
     // Because we can!
-    std::string original = getSenderIP(msg.carrierAdd);
+    std::string original = char42String(msg.carrierAdd);
     msg.type = MSG_ACK;
     sendUDP( sockfd,  original, port, (char*)&msg, sizeof(Message) );
 }
 
 void Membership::piggyAckMsg( Message msg, std::string sender )
 {
-    std::string target = getSenderIP(msg.carrierAdd);
+    std::string target = char42String(msg.carrierAdd);
     msg.type = MSG_ACK;
 
     ipString2Char4(sender, msg.carrierAdd); //Dont care, but meh
@@ -662,7 +650,7 @@ void Membership::piggyAckMsg( Message msg, std::string sender )
     sendUDP( sockfd,  target, port, (char*)&msg, sizeof(Message) );
 }
 
-bool isBiggerThanMine(std::string other, std::string mine)
+bool Membership::isBiggerThanMine(std::string other, std::string mine)
 {
 	char other_char[4];
 	char me_char[4];
@@ -673,13 +661,13 @@ bool isBiggerThanMine(std::string other, std::string mine)
 	{
 		unsigned int me = (uint8_t) me_char[i];
 		unsigned int ot = (uint8_t) other_char[i];
-		//std::cout << ot << " > " << me << std::endl;
+		logFile << ot << " > " << me << std::endl;
 		if( ot > me){
-			//std::cout << ot << " > " << me << std::endl;
+			logFile << ot << " > " << me << std::endl;
 			return true;
 		}
 		if( me > ot){
-			//std::cout << ot << " < " << me << std::endl;
+			logFile << ot << " < " << me << std::endl;
 			return false;
 		}
 	}
@@ -854,9 +842,9 @@ std::string Membership::printMember(){
 }
 
 //if already exist, return 1. else return 0
-int Membership::addMember(char * carrierAdd, int timeStamp){
+int Membership::addMember(std::string newAddress, int timeStamp){
     Node newMember;
-    newMember.ip_str = getSenderIP(carrierAdd);
+    newMember.ip_str = newAddress;
     newMember.timeStamp = timeStamp;
     newMember.active = 1;
     
@@ -1001,11 +989,11 @@ void Membership::spreadMessage(Message msg, int forwardNumber)
 
     for (int i = 0; i < selectedNode.size(); ++i)
     {
-        //std::cout << "comparing: " << selectedNode.at(i).ip_str << " " << char42String(msg.carrierAdd) << std::endl;
+        logFile << "comparing: " << selectedNode.at(i).ip_str << " " << char42String(msg.carrierAdd) << std::endl;
         if ( selectedNode.at(i).ip_str.compare(char42String(msg.carrierAdd)) == 0 )
         {
             selectedNode.erase(selectedNode.begin() + i); // remove carrier
-            //std::cout << "equal" << std::endl;
+            logFile << "equal" << std::endl;
             break;
         }
     }

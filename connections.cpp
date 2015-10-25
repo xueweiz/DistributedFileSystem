@@ -293,16 +293,3 @@ std::string getOwnIPAddr(){
     if (ifAddrStruct!=NULL) freeifaddrs(ifAddrStruct);
     return result;
 }
-
-std::string getSenderIP(char* carrierAdd){
-    std::stringstream ip_ss;
-
-    ip_ss << (int)(uint8_t)carrierAdd[0] << ".";
-    ip_ss << (int)(uint8_t)carrierAdd[1] << ".";
-    ip_ss << (int)(uint8_t)carrierAdd[2] << ".";
-    ip_ss << (int)(uint8_t)carrierAdd[3];
-
-    std::string ip_carrier = ip_ss.str();
-
-    return ip_carrier;
-}
