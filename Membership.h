@@ -6,11 +6,11 @@
 #include <vector>
 #include <mutex>
 
-struct Node {
-	std::string ip_str;	 // IP address in string format for easy compare;
+struct Node 
+{
+	std::string ip_str;	 // IP address in string format for easy handling;
 	int timeStamp;
-	int active;		//if active==1, it is alive. If out of reach, set to -3. Each round, increase 1. When reach 0, delete.
-	//bool leader;	//Flag indicating if a node is the leader
+	int active;
 };
 
 typedef enum MessageType

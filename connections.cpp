@@ -40,6 +40,33 @@ std::string char42String(char* buf) // buf must be size 4
     return aux.str();
 }
 
+//caller need to free the char*
+std::string getOwnIPAddr(){
+    struct ifaddrs * ifAddrStruct=NULL;
+    struct ifaddrs * ifa=NULL;
+    void * tmpAddrPtr=NULL;
+
+    getifaddrs(&ifAddrStruct);
+    std::string result;
+
+    int i=0;
+    for (ifa = ifAddrStruct; ifa != NULL; ifa = ifa->ifa_next) {
+        if (!ifa->ifa_addr) {
+            continue;
+        }
+        i++;
+        if(i==4){
+            tmpAddrPtr=&((struct sockaddr_in *)ifa->ifa_addr)->sin_addr;
+            char addressBuffer[INET_ADDRSTRLEN];
+            inet_ntop(AF_INET, tmpAddrPtr, addressBuffer, INET_ADDRSTRLEN);
+            result = addressBuffer;
+        }
+    }
+    
+    if (ifAddrStruct!=NULL) freeifaddrs(ifAddrStruct);
+    return result;
+}
+
 int getUDPSent()
 {
     return UDPsent;
@@ -267,29 +294,3 @@ int connect_to_server(const char* add, int port, int* connectionFd)
     }
 }
 
-//caller need to free the char*
-std::string getOwnIPAddr(){
-    struct ifaddrs * ifAddrStruct=NULL;
-    struct ifaddrs * ifa=NULL;
-    void * tmpAddrPtr=NULL;
-
-    getifaddrs(&ifAddrStruct);
-    std::string result;
-
-    int i=0;
-    for (ifa = ifAddrStruct; ifa != NULL; ifa = ifa->ifa_next) {
-        if (!ifa->ifa_addr) {
-            continue;
-        }
-        i++;
-        if(i==4){
-            tmpAddrPtr=&((struct sockaddr_in *)ifa->ifa_addr)->sin_addr;
-            char addressBuffer[INET_ADDRSTRLEN];
-            inet_ntop(AF_INET, tmpAddrPtr, addressBuffer, INET_ADDRSTRLEN);
-            result = addressBuffer;
-        }
-    }
-    
-    if (ifAddrStruct!=NULL) freeifaddrs(ifAddrStruct);
-    return result;
-}
