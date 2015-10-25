@@ -10,8 +10,35 @@
 #include "connections.h"
 #include "constant.h"
 
+using namespace std;
+
 int UDPsent = 0;
 int UDPreceived = 0;
+
+void ipString2Char4(std::string ip, char* buf) // buf must be size 4
+{
+    ip.replace(ip.find("."),1," ");
+    ip.replace(ip.find("."),1," ");
+    ip.replace(ip.find("."),1," ");
+    
+    std::stringstream ssip(ip);
+    int a;
+    ssip >> a; buf[0] = (char)a; 
+    ssip >> a; buf[1] = (char)a; 
+    ssip >> a; buf[2] = (char)a; 
+    ssip >> a; buf[3] = (char)a; 
+}
+
+std::string char42String(char* buf) // buf must be size 4
+{
+    std::stringstream aux;
+    aux << (unsigned int) ((uint8_t)buf[0]) << ".";
+    aux << (unsigned int) ((uint8_t)buf[1]) << ".";
+    aux << (unsigned int) ((uint8_t)buf[2]) << ".";
+    aux << (unsigned int) ((uint8_t)buf[3]);
+
+    return aux.str();
+}
 
 int getUDPSent()
 {
@@ -241,13 +268,13 @@ int connect_to_server(const char* add, int port, int* connectionFd)
 }
 
 //caller need to free the char*
-string getOwnIPAddr(){
+std::string getOwnIPAddr(){
     struct ifaddrs * ifAddrStruct=NULL;
     struct ifaddrs * ifa=NULL;
     void * tmpAddrPtr=NULL;
 
     getifaddrs(&ifAddrStruct);
-    string result;
+    std::string result;
 
     int i=0;
     for (ifa = ifAddrStruct; ifa != NULL; ifa = ifa->ifa_next) {
