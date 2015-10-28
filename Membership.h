@@ -136,6 +136,7 @@ public:
 	std::string printMember();
 	std::string getLeader();
 
+	std::vector<Node> getMembershipList();
 };
 
 #endif

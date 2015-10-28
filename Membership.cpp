@@ -685,6 +685,17 @@ std::string Membership::getLeader()
 	return "No leader here, I am my own boss \n";
 }
 
+std::vector<Node> Membership::getMembershipList()
+{
+
+    membersLock.lock();
+    std::vector<Node> ret = members;
+    membersLock.unlock();
+
+    return ret;
+}
+
+
 void Membership::runLeaderElection()
 {
 	leader.active = false;

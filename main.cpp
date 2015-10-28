@@ -18,7 +18,7 @@ std::ofstream logFile;
 /* User thread: Waits for user to input a grep command 
 When receiving the grep command from command line (test cases uses this), 
 it will bypass the cin*/
-void listeningCin(Membership* m)
+void listeningCin(Membership* m, FileSystem* fs)
 {
     std::string input;
     while (true)
@@ -53,6 +53,10 @@ void listeningCin(Membership* m)
             std::cout << "UDP Stats: Sent: " << getUDPSent();
             std::cout << " Received: " << getUDPReceived() << std::endl;
         }
+        else if (input.compare("put") == 0 || input.compare("put") == 0)
+        {
+            fs->put("172.22.150.226", "NotIllegallyDownloadedMovie.mp4");
+        }
         else{
             std::cout << "PLEASE CHECK AGAIN THE POSSIBLE OPTIONS" << std::endl;
         }
@@ -77,7 +81,7 @@ int main (int argc, char* argv[])
     Membership m(isIntroducer, port);
     FileSystem fs (port + 21, m); 
 
-    std::thread cinListening(listeningCin, &m);
+    std::thread cinListening(listeningCin, &m, &fs);
     cinListening.join();
 
     return 0;
