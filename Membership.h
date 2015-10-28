@@ -1,3 +1,6 @@
+#ifndef _Membership_H_
+#define _Membership_H_
+
 #include <iostream>
 #include <fstream>
 #include <sstream>
@@ -77,18 +80,18 @@ private:
 
 	bool bullied;
 
-	//List joining methods
+	//List joining methods  -  TCP methods
 	void forJoinThread();
 	void getAdress(std::string filename);
 	bool firstJoin();
 	int sendBackLocalList(int connFd);
 	int broadcastJoin(Message income, int i);
 
-	//Income messages processing methods
+	//Income messages processing methods - UDP methods
 	void listeningThread();
-	void joinMsg ( Message msg, std::string sender);
-	void leaveMsg( Message msg, std::string sender);
-	void failMsg ( Message msg, std::string sender);
+	void joinMsg 	 ( Message msg, std::string sender );
+	void leaveMsg	 ( Message msg, std::string sender );
+	void failMsg 	 ( Message msg, std::string sender );
 	void pingMsg 	 ( Message msg, std::string sender );
 	void ackMsg 	 ( Message msg, std::string sender );
 	void piggyMsg    ( Message msg, std::string sender );
@@ -134,3 +137,5 @@ public:
 	std::string getLeader();
 
 };
+
+#endif

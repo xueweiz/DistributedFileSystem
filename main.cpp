@@ -9,6 +9,7 @@
 #include "constant.h"
 #include "connections.h"
 #include "Membership.h"
+#include "FileSystem.h"
 
 using namespace std;
 
@@ -74,6 +75,7 @@ int main (int argc, char* argv[])
     bool isIntroducer = atoi(argv[2]);
 
     Membership m(isIntroducer, port);
+    FileSystem fs (port + 21, m); 
 
     std::thread cinListening(listeningCin, &m);
     cinListening.join();

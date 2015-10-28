@@ -2,7 +2,7 @@
 #C compiler
 CC = g++
 
-SRC = main.cpp Membership.cpp connections.cpp ChronoCpu.cpp Chrono.cpp
+SRC = main.cpp Membership.cpp FileSystem.cpp connections.cpp ChronoCpu.cpp Chrono.cpp
 
 CC_FLAGS = -pthread -std=c++11
 
