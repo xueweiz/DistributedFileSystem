@@ -18,6 +18,8 @@
 #include "ChronoCpu.h"
 #include "FileSystem.h"
 
+#define BUFFER_FILE_SIZE 1024*1024;
+
 FileSystem::FileSystem(int port, Membership& m) :
     membership(m), port(port)
 {
@@ -25,7 +27,6 @@ FileSystem::FileSystem(int port, Membership& m) :
 
     std::thread th1(&FileSystem::listeningThread, this);
     listening.swap(th1);
-
 }
 
 FileSystem::~FileSystem()
@@ -44,29 +45,49 @@ void FileSystem::listeningThread()
 
         logFile<<"listeningThread: someone is contacting me... "<< std::endl;
 
-        char a = '6';
+        Message_fs msg;
 
-        read(connFd, &a, sizeof(char));
+        ret = read(connFd, &msg, sizeof(Message_fs));
 
-        if (a == '4')
-        {
-            a = '6';
-            write(connFd, &a, sizeof(char));
-            std::cout << "Send correctly" << std::endl;
-        }
-        
+        std::string filename = msg.filename;
+        printf("About to receive %s\n",filename.c_str() );
 
-        close(connFd);        
+        char* buffer = new char[msg.size];
+        ret = read(connFd, buffer, msg.size);
+
+        std::string root = "files/";
+
+        std::ofstream newfile(root + filename, std::ofstream::binary);
+
+        newfile.write(buffer, msg.size);
+        newfile.close();
+        printf("File Received\n");
+
+        close(connFd);
+        delete buffer;        
     }
     return;
 }
 
 
-
-void FileSystem::put(std::string address, std::string filename)
+void FileSystem::put(std::string address, std::string localFile, std::string remoteFile)
 {
-    int connectionToServer;
-    //TCP connect to introducer/other nodes
+    int connectionToServer; //TCP connect to introducer/other nodes
+
+    // printf("Local file: %s\n", localFile.c_str());
+    // printf("Remote file: %s\n", remoteFile.c_str());
+
+    std::ifstream file(localFile, std::ifstream::binary);
+
+    if (!file.good())
+    {
+        std::cout << "Could not open file: " << localFile << std::endl;
+        logFile << "Could not open file: " << localFile << std::endl;
+        return;
+    }
+
+    //char buf[BUFFER_FILE_SIZE];
+
     std::cout<<"put: Connecting to "<< address << "..." << std::endl;
 
     int ret = connect_to_server(address.c_str(), port, &connectionToServer);
@@ -78,21 +99,31 @@ void FileSystem::put(std::string address, std::string filename)
     }
     else{
 
-        char a = '4';
-        int ret = write(connectionToServer, &a, sizeof(char) );
-        
-        read(connectionToServer, &a, sizeof(char));
+        // Read the file
+        file.seekg (0, file.end);
+        int length = file.tellg();
+        file.seekg (0, file.beg);        
 
-        if (a == '6')
-        {
-            std::cout << "Received correctly" << std::endl;
-        }        
+        char * buffer = new char [length];
+
+        file.read (buffer,length);
+
+        Message_fs msg;
+        msg.type = MSG_PUT;
+        remoteFile.copy(msg.filename, remoteFile.length());
+        //msg.filename[remoteFile.length()+1]='\0';
+        msg.size = length;
+
+        int ret = write(connectionToServer, &msg, sizeof(Message_fs) );
+
+        write(connectionToServer, buffer, length);     
 
         close(connectionToServer);
+        delete buffer;
     }    
 }
 
-void FileSystem::get(std::string address, std::string filename)
+void FileSystem::get(std::string address, std::string localFile, std::string remoteFile)
 {
 
 }

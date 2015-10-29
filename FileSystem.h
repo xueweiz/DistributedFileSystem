@@ -16,6 +16,20 @@ class FileSystem
 
 private: 
 
+	typedef enum MessageType
+	{
+	    MSG_PUT,
+	    MSG_GET,
+	    MSG_DELETE,
+	    MSG_EMPTY
+	} messageType;
+
+	struct Message_fs {
+		messageType type;
+		char filename[200];
+		size_t size;
+	};
+
 	std::ofstream logFile;	// Log file
 
 	int port; // TCP port to be used for communication
@@ -33,8 +47,8 @@ public:
 
 	void listeningThread();
 
-	void put(std::string address, std::string filename);
-	void get(std::string address, std::string filename);
+	void put(std::string address, std::string localFile, std::string remoteFile);
+	void get(std::string address, std::string localFile, std::string remoteFile);
 
 	void pull(std::string address, std::string filename);
 	void push(std::string address, std::string filename);

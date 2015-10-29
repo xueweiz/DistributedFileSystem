@@ -24,7 +24,8 @@ void listeningCin(Membership* m, FileSystem* fs)
     while (true)
     {
         std::cout << "Type a command (table, leave, join or quit): ";
-        getline(std::cin, input);
+        // getline(std::cin, input);
+        std::cin >> input;
         //std::cout << "You entered: " << input << std::endl;
 
         if (input.compare("quit") == 0 || input.compare("q") == 0)
@@ -53,9 +54,14 @@ void listeningCin(Membership* m, FileSystem* fs)
             std::cout << "UDP Stats: Sent: " << getUDPSent();
             std::cout << " Received: " << getUDPReceived() << std::endl;
         }
-        else if (input.compare("put") == 0 || input.compare("put") == 0)
+        else if (input.compare("put") == 0)
         {
-            fs->put("172.22.150.226", "NotIllegallyDownloadedMovie.mp4");
+            std::string localfile;
+            std::string remotefile;
+            std::cin >> localfile;
+            std::cin >> remotefile;
+
+            fs->put("localhost", localfile, remotefile);
         }
         else{
             std::cout << "PLEASE CHECK AGAIN THE POSSIBLE OPTIONS" << std::endl;
