@@ -34,6 +34,22 @@ FileSystem::~FileSystem()
 
 }
 
+void FileSystem::put(std::string localFile, std::string remoteFile)
+{
+    // hashing function to find the machine/s where to store the file;
+
+    std::string destAddress = "localhost";
+    put(destAddress, localFile, remoteFile);
+}
+
+void FileSystem::get(std::string localFile, std::string remoteFile)
+{
+    // hashing function to find the machine where to ask for the file;
+
+    std::string destAddress = "localhost";
+    get(destAddress, localFile, remoteFile);
+}
+
 void FileSystem::listeningThread()
 { 
     int listenFd = open_socket(port); 
@@ -59,7 +75,9 @@ void FileSystem::listeningThread()
         }
         if(msg.type == MSG_GET)
         {
-
+            msg.size = readFile(filename, &buffer);
+            write(connFd, &msg, sizeof(Message_fs));
+            write(connFd, buffer, msg.size);
         }
 
         close(connFd);
@@ -68,6 +86,7 @@ void FileSystem::listeningThread()
     return;
 }
 
+//Internal for the file system
 void FileSystem::saveFile(std::string filename, char* buffer, size_t length)
 {
     std::string root = "files/";
@@ -79,6 +98,33 @@ void FileSystem::saveFile(std::string filename, char* buffer, size_t length)
     logFile << "File " << root + filename << " saved" << std::endl;
 }
 
+//Internal for the filesystem
+int FileSystem::readFile(std::string filename, char** buffer)
+{
+    std::string root = "files/";
+    std::ifstream file(root + filename, std::ifstream::binary);
+
+    if (!file.good())
+    {
+        std::cout << "Could not open file: " << filename << std::endl;
+        logFile << "Could not open file: " << filename << std::endl;
+        return 0;
+    }
+
+    file.seekg (0, file.end);
+    int length = file.tellg();
+    file.seekg (0, file.beg);        
+
+    *buffer = new char [length];
+
+    file.read (*buffer,length);
+    file.close();
+
+    logFile << "File " << root + filename << " read" << std::endl;
+    std::cout << "File " << root + filename << " read" << std::endl;
+
+    return length;
+}
 
 void FileSystem::put(std::string address, std::string localFile, std::string remoteFile)
 {
@@ -119,30 +165,63 @@ void FileSystem::put(std::string address, std::string localFile, std::string rem
         Message_fs msg;
         msg.type = MSG_PUT;
         remoteFile.copy(msg.filename, remoteFile.length());
-        //msg.filename[remoteFile.length()+1]='\0';
         msg.size = length;
 
-        int ret = write(connectionToServer, &msg, sizeof(Message_fs) );
-
+        write(connectionToServer, &msg, sizeof(Message_fs) );
         write(connectionToServer, buffer, length);     
 
         close(connectionToServer);
         delete buffer;
-    }    
-}
+    }   
 
-void FileSystem::put(std::string localFile, std::string remoteFile)
-{
-    // hashing function to find the machine where to store the file;
-
-    std::string destAddress = "localhost";
-    put(destAddress, localFile, remoteFile);
+    file.close(); 
 }
 
 void FileSystem::get(std::string address, std::string localFile, std::string remoteFile)
 {
+    int connectionToServer; //TCP connect to introducer/other nodes
+
+    logFile << "put: Connecting to "<< address << "..." << std::endl;
+
+    int ret = connect_to_server(address.c_str(), port, &connectionToServer);
+    if(ret!=0)
+    {
+        logFile <<"ERROR Put: Cannot connect to "<<address<< std::endl;
+        std::cout <<"ERROR Put: Cannot connect to "<<address<< std::endl;
+        return;
+    }
+    else{
+
+        Message_fs msg;
+        msg.type = MSG_GET;
+        remoteFile.copy(msg.filename, remoteFile.length());
+
+        write(connectionToServer, &msg, sizeof(Message_fs)); // Send filename
+        read (connectionToServer, &msg, sizeof(Message_fs)); // Receive size
+
+        char * buffer = new char [msg.size];
+
+        read(connectionToServer, buffer,  msg.size);
+        //std::cout << "Received : " << msg.size << std::endl;
+
+        std::ofstream file(localFile, std::ofstream::binary);
+
+        if (!file.good())
+        {
+            std::cout << "Could not open file: " << localFile << std::endl;
+            logFile << "Could not open file: " << localFile << std::endl;
+            return;
+        }
+
+        file.write(buffer, msg.size); 
+        file.close();  
+
+        close(connectionToServer);
+        delete buffer;
+    }    
 
 }
+
 
 void FileSystem::pull(std::string address, std::string filename)
 {

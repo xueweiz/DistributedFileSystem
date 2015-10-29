@@ -41,25 +41,25 @@ private:
 
 	std::thread listening;
 
+	void listeningThread();
 
 	void put(std::string address, std::string localFile, std::string remoteFile);
 	void get(std::string address, std::string localFile, std::string remoteFile);
 
+	void saveFile(std::string filename, char* buffer, size_t length);
+	int  readFile(std::string filename, char** buffer);
+
 	void pull(std::string address, std::string filename);
 	void push(std::string address, std::string filename);
 
-	void saveFile(std::string filename, char* buffer, size_t length);
 
 public: 
 
 	FileSystem(int port, Membership& m);
 	~FileSystem();
 
-	void listeningThread();
-
 	void put(std::string localFile, std::string remoteFile);
 	void get(std::string localFile, std::string remoteFile);
-
 
 };
 

@@ -67,10 +67,10 @@ void listeningCin(Membership* m, FileSystem* fs)
         {
             std::string localfile;
             std::string remotefile;
-            std::cin >> localfile;
             std::cin >> remotefile;
+            std::cin >> localfile;
 
-            //fs->get(localfile, remotefile);
+            fs->get(localfile, remotefile);
         }
         else{
             std::cout << "PLEASE CHECK AGAIN THE POSSIBLE OPTIONS" << std::endl;
