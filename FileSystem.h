@@ -27,6 +27,7 @@ private:
 	struct Message_fs {
 		messageType type;
 		char filename[200];
+		char carrier[4];
 		size_t size;
 	};
 
@@ -40,6 +41,15 @@ private:
 
 	std::thread listening;
 
+
+	void put(std::string address, std::string localFile, std::string remoteFile);
+	void get(std::string address, std::string localFile, std::string remoteFile);
+
+	void pull(std::string address, std::string filename);
+	void push(std::string address, std::string filename);
+
+	void saveFile(std::string filename, char* buffer, size_t length);
+
 public: 
 
 	FileSystem(int port, Membership& m);
@@ -47,11 +57,8 @@ public:
 
 	void listeningThread();
 
-	void put(std::string address, std::string localFile, std::string remoteFile);
-	void get(std::string address, std::string localFile, std::string remoteFile);
-
-	void pull(std::string address, std::string filename);
-	void push(std::string address, std::string filename);
+	void put(std::string localFile, std::string remoteFile);
+	void get(std::string localFile, std::string remoteFile);
 
 
 };

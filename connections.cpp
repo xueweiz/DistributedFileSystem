@@ -216,7 +216,7 @@ int listen_socket(int listenFd)
 
     socklen_t len; //store size of the address
     int connFd;
-    struct sockaddr_in svrAdd, clntAdd;
+    struct sockaddr_in clntAdd;
 
     listen(listenFd, 5);
     

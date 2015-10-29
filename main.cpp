@@ -61,7 +61,16 @@ void listeningCin(Membership* m, FileSystem* fs)
             std::cin >> localfile;
             std::cin >> remotefile;
 
-            fs->put("localhost", localfile, remotefile);
+            fs->put(localfile, remotefile);
+        }
+        else if (input.compare("get") == 0)
+        {
+            std::string localfile;
+            std::string remotefile;
+            std::cin >> localfile;
+            std::cin >> remotefile;
+
+            //fs->get(localfile, remotefile);
         }
         else{
             std::cout << "PLEASE CHECK AGAIN THE POSSIBLE OPTIONS" << std::endl;

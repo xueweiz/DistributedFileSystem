@@ -48,25 +48,35 @@ void FileSystem::listeningThread()
         Message_fs msg;
 
         ret = read(connFd, &msg, sizeof(Message_fs));
-
         std::string filename = msg.filename;
-        printf("About to receive %s\n",filename.c_str() );
+        char* buffer;
 
-        char* buffer = new char[msg.size];
-        ret = read(connFd, buffer, msg.size);
+        if(msg.type == MSG_PUT)
+        {
+            buffer = new char[msg.size];
+            ret = read(connFd, buffer, msg.size);
+            saveFile(filename, buffer, msg.size);
+        }
+        if(msg.type == MSG_GET)
+        {
 
-        std::string root = "files/";
-
-        std::ofstream newfile(root + filename, std::ofstream::binary);
-
-        newfile.write(buffer, msg.size);
-        newfile.close();
-        printf("File Received\n");
+        }
 
         close(connFd);
         delete buffer;        
     }
     return;
+}
+
+void FileSystem::saveFile(std::string filename, char* buffer, size_t length)
+{
+    std::string root = "files/";
+    std::ofstream newfile(root + filename, std::ofstream::binary);
+
+    newfile.write(buffer, length);
+    newfile.close();
+
+    logFile << "File " << root + filename << " saved" << std::endl;
 }
 
 
@@ -86,9 +96,7 @@ void FileSystem::put(std::string address, std::string localFile, std::string rem
         return;
     }
 
-    //char buf[BUFFER_FILE_SIZE];
-
-    std::cout<<"put: Connecting to "<< address << "..." << std::endl;
+    logFile << "put: Connecting to "<< address << "..." << std::endl;
 
     int ret = connect_to_server(address.c_str(), port, &connectionToServer);
     if(ret!=0)
@@ -121,6 +129,14 @@ void FileSystem::put(std::string address, std::string localFile, std::string rem
         close(connectionToServer);
         delete buffer;
     }    
+}
+
+void FileSystem::put(std::string localFile, std::string remoteFile)
+{
+    // hashing function to find the machine where to store the file;
+
+    std::string destAddress = "localhost";
+    put(destAddress, localFile, remoteFile);
 }
 
 void FileSystem::get(std::string address, std::string localFile, std::string remoteFile)
