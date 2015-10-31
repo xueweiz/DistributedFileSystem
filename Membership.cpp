@@ -18,6 +18,10 @@
 #include "ChronoCpu.h"
 #include "Membership.h"
 
+#include "FileSystem.h"
+
+extern FileSystem * fileSystem;
+
 Membership::Membership(bool introducer, int port)
 {
 	logFile.open("logMembership.log");
@@ -73,6 +77,10 @@ void Membership::join()
     {   //introducer will firstJoin() once. Other node will keep firstJoin() until it enter the group.
         joined = firstJoin();
         //usleep( 1000*1000 );
+    }
+
+    if(fileSystem!=NULL){
+        fileSystem->join();
     }
 }
 

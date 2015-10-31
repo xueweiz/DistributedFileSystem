@@ -15,6 +15,9 @@ using namespace std;
 
 std::ofstream logFile;
 
+Membership * membership = NULL;
+FileSystem * fileSystem = NULL;
+
 /* User thread: Waits for user to input a grep command 
 When receiving the grep command from command line (test cases uses this), 
 it will bypass the cin*/
@@ -94,7 +97,9 @@ int main (int argc, char* argv[])
     bool isIntroducer = atoi(argv[2]);
 
     Membership m(isIntroducer, port);
-    FileSystem fs (port + 21, m); 
+    FileSystem fs (port + 21);
+    fileSystem = &fs;
+    membership = &m;
 
     std::thread cinListening(listeningCin, &m, &fs);
     cinListening.join();

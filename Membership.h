@@ -129,6 +129,7 @@ private:
 public: 
 
 	Membership(bool introducer, int port);
+
 	~Membership();
 
 	void join();

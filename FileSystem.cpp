@@ -20,10 +20,20 @@
 
 #define BUFFER_FILE_SIZE 1024*1024;
 
-FileSystem::FileSystem(int port, Membership& m) :
+extern Membership * membership;
+
+/*FileSystem::FileSystem(int port, Membership& m) :
     membership(m), port(port)
 {
 	logFile.open("logFileSystem.log"); // we can make all the logs going to a single file, but nah.
+
+    std::thread th1(&FileSystem::listeningThread, this);
+    listening.swap(th1);
+}*/
+
+FileSystem::FileSystem(int port ) : port(port)
+{
+    logFile.open("logFileSystem.log"); // we can make all the logs going to a single file, but nah.
 
     std::thread th1(&FileSystem::listeningThread, this);
     listening.swap(th1);
@@ -42,8 +52,8 @@ void FileSystem::put(std::string localFile, std::string remoteFile)
     put(destAddress, localFile, remoteFile);
 }
 
-void FileSystem::get(std::string localFile, std::string remoteFile)
-{
+void FileSystem::get(std::string localFile, std::string remoteFile){
+    //https://gitlab-beta.engr.illinois.edu/remis2/MP3-FileSystem.git
     // hashing function to find the machine where to ask for the file;
 
     std::string destAddress = "localhost";
@@ -231,4 +241,17 @@ void FileSystem::pull(std::string address, std::string filename)
 void FileSystem::push(std::string address, std::string filename)
 {
 
+}
+
+bool FileSystem::pullFileFromRange( int socketFd, int min, int max, bool rmRemoteFile ){
+    return false;
+}
+
+
+bool FileSystem::join(){
+    return false;
+}
+
+bool FileSystem::detectLeave( Node leaveNode ){
+    return false;
 }
