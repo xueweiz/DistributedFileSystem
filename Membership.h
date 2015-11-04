@@ -8,6 +8,7 @@
 #include <thread>
 #include <vector>
 #include <mutex>
+#include <condition_variable>
 
 struct Node 
 {
@@ -33,7 +34,7 @@ typedef enum MessageType
     MSG_NEWLEADER,		// Proclamation of a leader
     MSG_NEWLEADER_ACK,	// Proclamation of a leader ACK
 
-    MSG_EMPTY
+    MSG_EMPTY,
 } messageType;
 
 struct Message {
@@ -42,6 +43,16 @@ struct Message {
 	char carrierAdd[4];
 	int timeStamp;
 	char TTL;
+};
+
+class MemberUpdateMsg{
+public:
+	messageType type;
+	Node node;
+	bool fileSystemRead;
+	MemberUpdateMsg(messageType type, Node node);
+	MemberUpdateMsg( MemberUpdateMsg const &  msg);
+	MemberUpdateMsg & operator= ( MemberUpdateMsg const &  msg);
 };
 
 class Membership
@@ -126,7 +137,16 @@ private:
 	int queueSize();
 	bool ackMsgQueue();
 
+	//message queue to communicate to file system
+	std::vector<MemberUpdateMsg> fileSysMsgQueue;
+	std::mutex fileSysMsgQueueLock;	
+	std::condition_variable fileSysMsgQueueCV;
+	void pushMsgToFileSysQueue(MemberUpdateMsg msg);
+
 public: 
+	//file system call this method to pull member update message. no busy wait.
+	MemberUpdateMsg pullMsgFromFileSysQueue();
+	bool emptyFileSysQueue();
 
 	Membership(bool introducer, int port);
 
@@ -138,6 +158,7 @@ public:
 	std::string getLeader();
 
 	std::vector<Node> getMembershipList();
+	Node getMyNode();
 };
 
 #endif

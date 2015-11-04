@@ -20,7 +20,7 @@
 
 #include "FileSystem.h"
 
-extern FileSystem * fileSystem;
+//extern FileSystem * fileSystem;
 
 Membership::Membership(bool introducer, int port)
 {
@@ -79,9 +79,9 @@ void Membership::join()
         //usleep( 1000*1000 );
     }
 
-    if(fileSystem!=NULL){
+    /*if(fileSystem!=NULL){
         fileSystem->join();
-    }
+    }*/
 }
 
 void Membership::leave()
@@ -94,10 +94,15 @@ void Membership::leave()
     msg.timeStamp = members.at(0).timeStamp;
     membersLock.unlock();
     spreadMessage(msg); // this method wants the lock!
-    membersLock.lock();
+    
+    while(members.size()!=0){
+        failMember(members[0].ip_str, members[0].timeStamp);
+    }
+
+    //membersLock.lock();
     //members.at(0).active = false;
-    members.clear();
-    membersLock.unlock();
+    //members.clear();
+    //membersLock.unlock();
 } 
 
 /* Get address from other nodes: */
@@ -871,7 +876,7 @@ int Membership::addMember(std::string newAddress, int timeStamp){
 
     bool exist = false;
     int position = 0;
-    for(int i=0; i<members.size(); i++){
+    for(int i=0; i < members.size(); i++){
         if( members[i].ip_str.compare( newMember.ip_str )==0 ){
             exist = true;
             position = i;
@@ -882,6 +887,10 @@ int Membership::addMember(std::string newAddress, int timeStamp){
         members[position].timeStamp = newMember.timeStamp;
     }
     else{
+        //if add a new member, tell the memUpMsgQueue
+        MemberUpdateMsg msg(MSG_JOIN, newMember);
+        pushMsgToFileSysQueue(msg);
+
         members.push_back(newMember);
     }
 
@@ -943,6 +952,9 @@ int Membership::failMember(std::string ip_str, int timeStamp){
     }
     
     if(exist){
+        MemberUpdateMsg msg(MSG_LEAVE, members[position]);
+        pushMsgToFileSysQueue(msg);
+
         members.erase( members.begin()+position );
     }
     
@@ -1039,4 +1051,55 @@ void Membership::failureDetected(Node process) // This is the method we call whe
     msg.TTL = K_FORWARD;
 
     spreadMessage(msg);
+}
+
+MemberUpdateMsg::MemberUpdateMsg(messageType type, Node node){
+    this->type = type;
+    this->node = node;
+    this->fileSystemRead = false;
+}
+
+MemberUpdateMsg::MemberUpdateMsg( MemberUpdateMsg const &  msg){
+    this->type = msg.type;
+    this->node = msg.node;
+    this->fileSystemRead = msg.fileSystemRead;
+}
+
+MemberUpdateMsg & MemberUpdateMsg::operator=( MemberUpdateMsg const & msg){
+    this->type = msg.type;
+    this->node = msg.node;
+    this->fileSystemRead = msg.fileSystemRead;
+    return *this;   
+}
+
+void Membership::pushMsgToFileSysQueue(MemberUpdateMsg msg){
+    std::unique_lock<std::mutex> locker( fileSysMsgQueueLock );
+
+    this->fileSysMsgQueue.push_back(msg);
+
+    this->fileSysMsgQueueCV.notify_all();
+}
+
+MemberUpdateMsg Membership::pullMsgFromFileSysQueue(){
+    std::unique_lock<std::mutex> locker( fileSysMsgQueueLock );
+
+    while( fileSysMsgQueue.size()==0 ){
+        this->fileSysMsgQueueCV.wait( locker );
+    }
+    
+    MemberUpdateMsg msg = fileSysMsgQueue[ 0 ];
+    fileSysMsgQueue.erase( fileSysMsgQueue.begin() );
+    
+    return msg;
+}
+
+bool Membership::emptyFileSysQueue(){
+    fileSysMsgQueueLock.lock();
+    bool ret = fileSysMsgQueue.size();
+    fileSysMsgQueueLock.unlock();
+    return ret;
+}
+
+Node Membership::getMyNode(){
+    return members[0];
 }

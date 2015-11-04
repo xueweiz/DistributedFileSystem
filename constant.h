@@ -9,4 +9,7 @@
 #define SLEEP_TIME (50)
 #define MAX_LATENCY (200*1000)	//0.1s
 
+//for file system
+#define RING_SIZE (1000)
+
 #endif

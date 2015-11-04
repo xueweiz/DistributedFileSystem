@@ -20,24 +20,28 @@
 
 #define BUFFER_FILE_SIZE 1024*1024;
 
-extern Membership * membership;
+//extern Membership * membership;
 
-/*FileSystem::FileSystem(int port, Membership& m) :
+FileSystem::FileSystem(int port, Membership& m) :
     membership(m), port(port)
 {
 	logFile.open("logFileSystem.log"); // we can make all the logs going to a single file, but nah.
 
+    std::thread th2(&FileSystem::updateThread, this);
+    ringUpdating.swap(th2);
+
     std::thread th1(&FileSystem::listeningThread, this);
     listening.swap(th1);
-}*/
+}
 
+/*
 FileSystem::FileSystem(int port ) : port(port)
 {
     logFile.open("logFileSystem.log"); // we can make all the logs going to a single file, but nah.
 
     std::thread th1(&FileSystem::listeningThread, this);
     listening.swap(th1);
-}
+}*/
 
 FileSystem::~FileSystem()
 {
@@ -228,8 +232,7 @@ void FileSystem::get(std::string address, std::string localFile, std::string rem
 
         close(connectionToServer);
         delete buffer;
-    }    
-
+    }
 }
 
 
@@ -243,15 +246,132 @@ void FileSystem::push(std::string address, std::string filename)
 
 }
 
+bool FileSystem::VirtualNode::operator<(VirtualNode const & second) const{
+    return this->key < second.key ? true : false;
+}
+
+bool FileSystem::VirtualNode::operator>(VirtualNode const & second) const{
+    return this->key > second.key ? true : false;
+}
+
+bool FileSystem::VirtualNode::operator==(VirtualNode const & second) const{
+    return this->key == second.key ? true : false;
+}
+
 bool FileSystem::pullFileFromRange( int socketFd, int min, int max, bool rmRemoteFile ){
     return false;
 }
 
+int FileSystem::hashString( std::string s ){
+    unsigned int value = (unsigned int) ( std::hash<std::string>()(s) );
+    return ( (int)(value % RING_SIZE) );
+}
 
-bool FileSystem::join(){
-    return false;
+//add new joining node&hash to virtual ring, update myPosition. return the relative position to new node 
+int FileSystem::addToVirtualRing( Node n ){
+    VirtualNode newNode;
+    newNode.ip_str = n.ip_str;
+    newNode.key = hashString(newNode.ip_str);
+
+    virtualRingLock.lock();
+    
+    virtualRing.push_back(newNode);
+    std::sort(virtualRing.begin(), virtualRing.end());
+    myPosition = find( virtualRing.begin(), virtualRing.end(), myself ) - virtualRing.begin();
+    int joinPosition = find( virtualRing.begin(), virtualRing.end(), newNode ) - virtualRing.begin();
+
+    virtualRingLock.unlock();
+
+    return joinPosition - myPosition;
+}
+
+//delete the leaving node&hash to virtual ring, update myPosition. return the relative position to new node 
+int FileSystem::deleteFromVirtualRing( Node n ){
+    cout<<"detect leave: "<<n.ip_str<<endl;
+
+    VirtualNode changeNode;
+    changeNode.ip_str = n.ip_str;
+    changeNode.key = hashString(changeNode.ip_str);
+
+    cout<<"leave virtual node: "<<changeNode.ip_str<<" "<<changeNode.key<<endl;
+
+    virtualRingLock.lock();
+    
+    int myOldPosition = myPosition;
+
+    int leavePosition = find( virtualRing.begin(), virtualRing.end(), changeNode ) - virtualRing.begin();
+
+    cout<<"leave node position: "<<leavePosition<<endl;
+
+    virtualRing.erase( virtualRing.begin() + leavePosition );
+
+    if( leavePosition == myOldPosition )
+        myPosition = -1;
+    else
+        myPosition = find( virtualRing.begin(), virtualRing.end(), myself ) - virtualRing.begin();
+    
+    virtualRingLock.unlock();
+
+    return leavePosition - myOldPosition;
+}
+
+void FileSystem::printVirtualRing(){
+    virtualRingLock.lock();
+    std::cout<<"myself: "<<myself.ip_str<<" "<<myself.key<<std::endl;
+    for(int i=0; i < virtualRing.size(); i++){
+        std::cout<<virtualRing[i].ip_str<<" "<<virtualRing[i].key<<std::endl;
+    }
+    std::cout<<std::endl;
+    virtualRingLock.unlock();
+}
+
+bool FileSystem::detectJoin( Node joinNode ){
+    addToVirtualRing( joinNode );
+
+    return true;
+}
+
+bool FileSystem::myselfJoin( Node myNodeToChange ){
+    addToVirtualRing( myNodeToChange );
+
+    return true;
 }
 
 bool FileSystem::detectLeave( Node leaveNode ){
-    return false;
+    
+    deleteFromVirtualRing( leaveNode );
+
+    return true;
+}
+
+bool FileSystem::myselfLeave( Node myNodeToChange ){
+    deleteFromVirtualRing( myNodeToChange );
+
+    return true;
+}
+
+void FileSystem::updateThread(){
+    myNode = membership.getMyNode();
+    myself.ip_str = myNode.ip_str;
+    myself.key = hashString( myself.ip_str );
+
+    while(true){
+        MemberUpdateMsg msg = membership.pullMsgFromFileSysQueue();
+        
+        if(msg.type == MSG_JOIN){
+            cout<<"recv join msg: "<<msg.node.ip_str<<endl;
+            if(msg.node.ip_str.compare(myNode.ip_str) != 0)
+                detectJoin( msg.node );
+            else
+                myselfJoin( msg.node );
+        }
+        else if(msg.type == MSG_LEAVE || msg.type == MSG_FAIL ){
+            cout<<"recv leave msg: "<<msg.node.ip_str<<endl;
+            if( msg.node.ip_str.compare(myNode.ip_str) != 0 )
+                detectLeave( msg.node );
+            else
+                myselfLeave( msg.node );
+        }
+        printVirtualRing();
+    }
 }
