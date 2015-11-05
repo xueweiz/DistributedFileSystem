@@ -78,6 +78,10 @@ void Membership::join()
         joined = firstJoin();
         //usleep( 1000*1000 );
     }
+
+
+    MemberUpdateMsg msg( MSG_JOIN_FINISH , members[0]);
+    pushMsgToFileSysQueue(msg);
 }
 
 void Membership::leave()

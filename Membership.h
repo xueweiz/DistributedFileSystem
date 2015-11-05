@@ -28,13 +28,14 @@ typedef enum MessageType
     MSG_FAIL,
     MSG_JOIN,			//only for TCP connection
     MSG_LEAVE,
+    MSG_JOIN_FINISH,
 
     MSG_ELECTION,		// Node that detect failure of leader
     MSG_BULLY,			// Node with higher is is bullying
     MSG_NEWLEADER,		// Proclamation of a leader
     MSG_NEWLEADER_ACK,	// Proclamation of a leader ACK
 
-    MSG_EMPTY,
+    MSG_EMPTY
 } messageType;
 
 struct Message {
