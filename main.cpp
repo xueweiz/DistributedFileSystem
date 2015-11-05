@@ -75,6 +75,10 @@ void listeningCin(Membership* m, FileSystem* fs)
 
             fs->get(localfile, remotefile);
         }
+        else if (input.compare("files") == 0)
+        {
+            std::cout << fs->getFileList() << std::endl;
+        }
         else{
             std::cout << "PLEASE CHECK AGAIN THE POSSIBLE OPTIONS" << std::endl;
         }

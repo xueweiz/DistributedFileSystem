@@ -4,6 +4,7 @@
 #include <iostream>
 #include <cstdlib>
 #include <fstream>
+#include <string>
 #include <sstream>
 #include <string>
 #include <thread>
@@ -146,6 +147,8 @@ public:
 
 	//when myself is leaving, update virtual ring
 	bool myselfLeave( Node myNodeToChange );
+
+	std::string getFileList();
 
 	void put(std::string localFile, std::string remoteFile);
 	void get(std::string localFile, std::string remoteFile);

@@ -239,6 +239,20 @@ bool FileSystem::saveFile(std::string filename, char* buffer, size_t length)
     return true;
 }
 
+std::string FileSystem::getFileList()
+{
+    std::stringstream ss;
+
+    filesLock.lock();
+    for (std::list<FileEntry>::iterator it=files.begin(); it != files.end(); ++it)
+    {
+        ss << (*it).filename << " " << (*it).key << std::endl;
+    }
+    filesLock.unlock();
+
+    return ss.str();
+}
+
 //Internal for the filesystem
 int FileSystem::readFile(std::string filename, char** buffer)
 {
