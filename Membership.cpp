@@ -20,8 +20,6 @@
 
 #include "FileSystem.h"
 
-//extern FileSystem * fileSystem;
-
 Membership::Membership(bool introducer, int port)
 {
 	logFile.open("logMembership.log");

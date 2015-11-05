@@ -15,9 +15,6 @@ using namespace std;
 
 std::ofstream logFile;
 
-//Membership * membership = NULL;
-//FileSystem * fileSystem = NULL;
-
 /* User thread: Waits for user to input a grep command 
 When receiving the grep command from command line (test cases uses this), 
 it will bypass the cin*/
