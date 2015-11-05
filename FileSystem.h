@@ -67,8 +67,11 @@ private:
 
 	void listeningThread();
 
-	void put(std::string address, std::string localFile, std::string remoteFile);
-	void get(std::string address, std::string localFile, std::string remoteFile);
+	bool putToNode(int nodePosition, std::string localFile, std::string remoteFile);
+	bool getFromNode(int nodePosition, std::string localFile, std::string remoteFile);
+
+	bool put(std::string address, std::string localFile, std::string remoteFile);
+	bool get(std::string address, std::string localFile, std::string remoteFile);
 	
 	void saveFile(std::string filename, char* buffer, size_t length);
 	int  readFile(std::string filename, char** buffer);
@@ -92,6 +95,9 @@ private:
 	int getNextInVirtualRing( int n );
 	//give a node
 	int getVirtualNodeByKey( int key );
+	//give a key, find the response node position
+	int findPositionByKey( int key );
+
 
 	void updateThread();
 

@@ -48,20 +48,80 @@ FileSystem::~FileSystem()
 
 }
 
+int FileSystem::findPositionByKey( int key ){
+    int position = 0;
+    virtualRingLock.lock();
+    for(int i=0; i < virtualRing.size(); i++){
+        if(virtualRing[i].key >= key ){ //find the first virtual node with n.key >= key. If not, return the first Node.
+            position = i;
+            break;
+        }
+    }
+    virtualRingLock.unlock();
+    return position;
+}
+
+bool FileSystem::putToNode(int nodePosition, std::string localFile, std::string remoteFile){
+    nodePosition = ( nodePosition + virtualRing.size() ) % virtualRing.size();
+    std::string destAddress = virtualRing[nodePosition].ip_str;    
+    return put(destAddress, localFile, remoteFile);
+}
+
+bool FileSystem::getFromNode(int nodePosition, std::string localFile, std::string remoteFile){
+    nodePosition = ( nodePosition + virtualRing.size() ) % virtualRing.size();
+    std::string destAddress = virtualRing[nodePosition].ip_str;    
+    return get(destAddress, localFile, remoteFile);
+}
+
 void FileSystem::put(std::string localFile, std::string remoteFile)
 {
     // hashing function to find the machine/s where to store the file;
+    
+    int fileKey = hashString(localFile);
+    int position = findPositionByKey(fileKey);
 
-    std::string destAddress = "localhost";
-    put(destAddress, localFile, remoteFile);
+    cout<<"put "<<localFile<<" "<<fileKey<<" to "<<position<<" "<<virtualRing[position].ip_str<<" "<<virtualRing[position].key<<endl;
+
+    bool attempt = putToNode( position, localFile, remoteFile );
+    if(attempt)
+        return;
+    
+    attempt = putToNode( position+1, localFile, remoteFile );
+    if(attempt)
+        return;
+    
+    attempt = putToNode( position+2, localFile, remoteFile );
+    if(attempt)
+        return;
+
+
+    //std::string destAddress = "localhost";
+    //put(destAddress, localFile, remoteFile);
 }
 
 void FileSystem::get(std::string localFile, std::string remoteFile){
     //https://gitlab-beta.engr.illinois.edu/remis2/MP3-FileSystem.git
     // hashing function to find the machine where to ask for the file;
 
-    std::string destAddress = "localhost";
-    get(destAddress, localFile, remoteFile);
+    int fileKey = hashString(localFile);
+    int position = findPositionByKey(fileKey);
+
+    cout<<"get "<<localFile<<" "<<fileKey<<" from "<<position<<" "<<virtualRing[position].ip_str<<" "<<virtualRing[position].key<<endl;
+
+    bool attempt = getFromNode( position, localFile, remoteFile );
+    if(attempt)
+        return;
+    
+    attempt = getFromNode( position+1, localFile, remoteFile );
+    if(attempt)
+        return;
+    
+    attempt = getFromNode( position+2, localFile, remoteFile );
+    if(attempt)
+        return;
+
+    //std::string destAddress = "localhost";
+    //get(destAddress, localFile, remoteFile);
 }
 
 void FileSystem::listeningThread()
@@ -140,7 +200,7 @@ int FileSystem::readFile(std::string filename, char** buffer)
     return length;
 }
 
-void FileSystem::put(std::string address, std::string localFile, std::string remoteFile)
+bool FileSystem::put(std::string address, std::string localFile, std::string remoteFile)
 {
     int connectionToServer; //TCP connect to introducer/other nodes
 
@@ -153,7 +213,7 @@ void FileSystem::put(std::string address, std::string localFile, std::string rem
     {
         std::cout << "Could not open file: " << localFile << std::endl;
         logFile << "Could not open file: " << localFile << std::endl;
-        return;
+        return false;
     }
 
     logFile << "put: Connecting to "<< address << "..." << std::endl;
@@ -163,7 +223,7 @@ void FileSystem::put(std::string address, std::string localFile, std::string rem
     {
         logFile <<"ERROR Put: Cannot connect to "<<address<< std::endl;
         std::cout <<"ERROR Put: Cannot connect to "<<address<< std::endl;
-        return;
+        return false;
     }
     else{
 
@@ -189,9 +249,10 @@ void FileSystem::put(std::string address, std::string localFile, std::string rem
     }   
 
     file.close(); 
+    return true;
 }
 
-void FileSystem::get(std::string address, std::string localFile, std::string remoteFile)
+bool FileSystem::get(std::string address, std::string localFile, std::string remoteFile)
 {
     int connectionToServer; //TCP connect to introducer/other nodes
 
@@ -202,7 +263,7 @@ void FileSystem::get(std::string address, std::string localFile, std::string rem
     {
         logFile <<"ERROR Put: Cannot connect to "<<address<< std::endl;
         std::cout <<"ERROR Put: Cannot connect to "<<address<< std::endl;
-        return;
+        return false;
     }
     else{
 
@@ -224,7 +285,7 @@ void FileSystem::get(std::string address, std::string localFile, std::string rem
         {
             std::cout << "Could not open file: " << localFile << std::endl;
             logFile << "Could not open file: " << localFile << std::endl;
-            return;
+            return false;
         }
 
         file.write(buffer, msg.size); 
@@ -233,6 +294,8 @@ void FileSystem::get(std::string address, std::string localFile, std::string rem
         close(connectionToServer);
         delete buffer;
     }
+
+    return true;
 }
 
 

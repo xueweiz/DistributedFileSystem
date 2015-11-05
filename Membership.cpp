@@ -78,10 +78,6 @@ void Membership::join()
         joined = firstJoin();
         //usleep( 1000*1000 );
     }
-
-    /*if(fileSystem!=NULL){
-        fileSystem->join();
-    }*/
 }
 
 void Membership::leave()
@@ -98,11 +94,6 @@ void Membership::leave()
     while(members.size()!=0){
         failMember(members[0].ip_str, members[0].timeStamp);
     }
-
-    //membersLock.lock();
-    //members.at(0).active = false;
-    //members.clear();
-    //membersLock.unlock();
 } 
 
 /* Get address from other nodes: */
