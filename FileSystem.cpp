@@ -175,7 +175,7 @@ bool inRange(int key, int min, int max){
     if(min < max)
         return (min<key && key<=max);
     else
-        return ( (0<=key <= min) || (max<key<=RING_SIZE)  );
+        return ( (0 <= key && key <= min) || (max < key && key <= RING_SIZE)  );
 }
 
 bool FileSystem::sendFileByRange(int connFd, Message_fs msg ){
@@ -215,6 +215,7 @@ bool FileSystem::sendFileByRange(int connFd, Message_fs msg ){
 //does not maintain file list!
 bool FileSystem::deleteFile( std::string  filename ){
     std::string command = "rm files/" + filename;
+    system(command.c_str());
     return true;
 }
 
@@ -560,9 +561,9 @@ bool FileSystem::detectJoin( Node joinNode ){
 
 FileSystem::VirtualNode FileSystem::nNodeBefore(int n, int current){
     int position = current - n;
-    if(position < 0)
+    while(position < 0)
         position += virtualRing.size();
-    if(position >= virtualRing.size())
+    while(position >= virtualRing.size())
         position -= virtualRing.size();
     
     return virtualRing[position];
@@ -570,9 +571,9 @@ FileSystem::VirtualNode FileSystem::nNodeBefore(int n, int current){
 
 FileSystem::VirtualNode FileSystem::nNodeLater(int n, int current){
     int position = current + n;
-    if(position < 0)
+    while(position < 0)
         position += virtualRing.size();
-    if(position >= virtualRing.size())
+    while(position >= virtualRing.size())
         position -= virtualRing.size();
     
     return virtualRing[position];
@@ -641,7 +642,7 @@ void FileSystem::updateThread(){
                 //myselfJoin( msg.node );
         }
         else if(msg.type == MSG_JOIN_FINISH){
-            //myJoinFinished( );
+            myJoinFinished( );
         }
         else if(msg.type == MSG_LEAVE || msg.type == MSG_FAIL ){
             cout<<"recv leave msg: "<<msg.node.ip_str<<endl;

@@ -2,6 +2,7 @@
 #define _FileSystem_H_
 
 #include <iostream>
+#include <cstdlib>
 #include <fstream>
 #include <sstream>
 #include <string>
