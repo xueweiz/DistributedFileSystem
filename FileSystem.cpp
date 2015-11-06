@@ -169,7 +169,8 @@ bool inRange(int key, int min, int max){
         return ( (0 <= key && key <= min) || (max < key && key <= RING_SIZE)  );
 }
 
-bool FileSystem::sendFileByRange(int connFd, Message_fs msg ){
+bool FileSystem::sendFileByRange(int connFd, Message_fs msg )
+{
     bool deleteMyCopy = ( (msg.type == MSG_PULL_MV) ? true : false );
 
     filesLock.lock();
@@ -180,8 +181,10 @@ bool FileSystem::sendFileByRange(int connFd, Message_fs msg ){
     }
     msg.size = count;
     write(connFd, &msg, sizeof(Message_fs));
-    for( auto &file : files ){
-        if( inRange(file.key, msg.minKey, msg.maxKey) ){
+    for( auto &file : files )
+    {
+        if( inRange(file.key, msg.minKey, msg.maxKey) )
+        {
             memset(msg.filename, '\0', 200);
             file.filename.copy(msg.filename, file.filename.length() );
 
@@ -191,18 +194,31 @@ bool FileSystem::sendFileByRange(int connFd, Message_fs msg ){
             msg.size = readFile(file.filename, &buffer);
 
             write(connFd, &msg, sizeof(Message_fs));
+            std::cout << "first write " << std::endl;
+            std::cout << "for second write " << msg.size << std::endl;
             write(connFd, buffer, msg.size);
+            std::cout << "second write " << std::endl;
+            // THERE IS BUG HERE!
 
             delete buffer;
 
-            if(deleteMyCopy){
+            std::cout << "buffer deleted " << std::endl;
+
+            if(deleteMyCopy)
+            {
+                std::cout << "deleting the copy" << std::endl;
                 files.remove( file );   //maintain file list
-                deleteFile( file.filename );
+                if ( deleteFile( file.filename ) ) 
+                {
+                    std::cout << file.filename << "deleted" << std::endl;
+                }
             }
         }
     }
 
     filesLock.unlock();
+
+    std::cout << "Returning from sendFileByRange" << std::endl;
     return true;
 }
 
@@ -229,9 +245,9 @@ bool FileSystem::saveFile(std::string filename, char* buffer, size_t length)
     filesLock.unlock();
 
     logFile << "saveFile " << root + filename << " saved" << std::endl;
-    cout << "saveFile " << root + filename << " saved" << std::endl;
+    // cout << "saveFile " << root + filename << " saved" << std::endl;
 
-    cout<<"saveFile: "<<fileEntry.filename<<endl;
+    // cout<<"saveFile: "<<fileEntry.filename<<endl;
 
     return true;
 }
@@ -322,8 +338,8 @@ bool FileSystem::putToAddress(std::string address, std::string localFile, std::s
         remoteFile.copy(msg.filename, remoteFile.length());
         msg.filename[remoteFile.length()+1] = '\0';
         msg.size = length+1;
-        std::string test = msg.filename;
-        std::cout << "test: :" << test << std::endl;
+        //std::string test = msg.filename;
+        //std::cout << "test: :" << test << std::endl;
 
         write(connectionToServer, &msg, sizeof(Message_fs) );
         write(connectionToServer, buffer, length);     
@@ -489,13 +505,13 @@ int FileSystem::addToVirtualRing( Node n ){
 
 //delete the leaving node&hash to virtual ring, update myPosition. return the relative position to new node 
 int FileSystem::deleteFromVirtualRing( Node n ){
-    cout<<"detect leave: "<<n.ip_str<<endl;
+    // cout<<"detect leave: "<<n.ip_str<<endl;
 
     VirtualNode changeNode;
     changeNode.ip_str = n.ip_str;
     changeNode.key = hashString(changeNode.ip_str);
 
-    cout<<"leave virtual node: "<<changeNode.ip_str<<" "<<changeNode.key<<endl;
+    // cout<<"leave virtual node: "<<changeNode.ip_str<<" "<<changeNode.key<<endl;
 
     virtualRingLock.lock();
     
@@ -503,7 +519,7 @@ int FileSystem::deleteFromVirtualRing( Node n ){
 
     int leavePosition = find( virtualRing.begin(), virtualRing.end(), changeNode ) - virtualRing.begin();
 
-    cout<<"leave node position: "<<leavePosition<<endl;
+    // cout<<"leave node position: "<<leavePosition<<endl;
 
     virtualRing.erase( virtualRing.begin() + leavePosition );
 
@@ -658,7 +674,7 @@ void FileSystem::updateThread(){
         MemberUpdateMsg msg = membership.pullMsgFromFileSysQueue();
         
         if(msg.type == MSG_JOIN){
-            cout<<"recv join msg: "<<msg.node.ip_str<<endl;
+            // cout<<"recv join msg: "<<msg.node.ip_str<<endl;
             //if(msg.node.ip_str.compare(myNode.ip_str) != 0)
                 detectJoin( msg.node );
             //else
@@ -668,12 +684,12 @@ void FileSystem::updateThread(){
             myJoinFinished( );
         }
         else if(msg.type == MSG_LEAVE || msg.type == MSG_FAIL ){
-            cout<<"recv leave msg: "<<msg.node.ip_str<<endl;
+            // cout<<"recv leave msg: "<<msg.node.ip_str<<endl;
             if( msg.node.ip_str.compare(myNode.ip_str) != 0 )
                 detectLeave( msg.node );
             else
                 myselfLeave( msg.node );
         }
-        printVirtualRing();
+        // printVirtualRing();
     }
 }
