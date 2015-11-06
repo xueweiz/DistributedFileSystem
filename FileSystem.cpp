@@ -190,6 +190,17 @@ void FileSystem::listeningThread()
         }
         if(msg.type == MSG_DELETE)
         {
+            filesLock.lock();
+            for( auto &file : files )
+            {
+                if( file.filename.compare(filename) == 0)
+                {
+                    files.remove(file);
+                    break;
+                }
+
+            }
+            filesLock.unlock();
             deleteFile(filename);
         }
         if(msg.type == MSG_PULL_CP || msg.type == MSG_PULL_MV){
@@ -247,6 +258,9 @@ bool FileSystem::sendFileByRange(int connFd, Message_fs msg )
             {
                 std::cout << "deleting the copy" << std::endl;
                 files.remove( file );   //maintain file list
+
+                // THIS IS A BUG!!!!
+                
                 if ( deleteFile( file.filename ) ) 
                 {
                     std::cout << file.filename << "deleted" << std::endl;
