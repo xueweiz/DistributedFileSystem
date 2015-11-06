@@ -80,7 +80,7 @@ void FileSystem::put(std::string localFile, std::string remoteFile)
 {
     // hashing function to find the machine/s where to store the file;
     
-    int fileKey = hashString(localFile);
+    int fileKey = hashString(remoteFile);
     int position = findPositionByKey(fileKey);
 
     cout<<"put "<<localFile<<" "<<fileKey<<" to "<<position<<" "<<virtualRing[position].ip_str<<" "<<virtualRing[position].key<<endl;
