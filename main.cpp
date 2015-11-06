@@ -72,8 +72,19 @@ void listeningCin(Membership* m, FileSystem* fs)
 
             fs->get(localfile, remotefile);
         }
-        else if (input.compare("files") == 0)
+        else if (input.compare("vtable") == 0 || input.compare("vt") == 0)
         {
+            fs->printVirtualRing();
+        }
+        else if (input.compare("rm") == 0)
+        {
+            std::string remotefile;
+            std::cin >> remotefile;
+            fs->deleteFromFS(remotefile);
+        }
+        else if (input.compare("stored") == 0)
+        {
+            std::cout << "Local Files List: " << std::endl;
             std::cout << fs->getFileList() << std::endl;
         }
         else{

@@ -63,6 +63,13 @@ bool FileSystem::putToNode(int nodePosition, std::string localFile, std::string 
     return putToAddress(destAddress, localFile, remoteFile);
 }
 
+bool FileSystem::deleteFromNode(int nodePosition, std::string remoteFile)
+{
+    nodePosition = ( nodePosition + virtualRing.size() ) % virtualRing.size();
+    std::string destAddress = virtualRing[nodePosition].ip_str;    
+    return deleteFromAddress(destAddress, remoteFile);
+}
+
 bool FileSystem::getFromNode(int nodePosition, std::string localFile, std::string remoteFile){
     nodePosition = ( nodePosition + virtualRing.size() ) % virtualRing.size();
     std::string destAddress = virtualRing[nodePosition].ip_str;    
@@ -120,6 +127,34 @@ void FileSystem::get(std::string localFile, std::string remoteFile){
     //get(destAddress, localFile, remoteFile);
 }
 
+void FileSystem::deleteFromFS(std::string remoteFile)
+{
+    // hashing function to find the machine/s where to store the file;
+    
+    int fileKey = hashString(remoteFile);
+    int position = findPositionByKey(fileKey);
+
+    cout<<"delete " << fileKey << " from "<<position<<" "<<virtualRing[position].ip_str<<" "<<virtualRing[position].key<<endl;
+
+    bool attempt = deleteFromNode( position, remoteFile );
+    if( !attempt)
+    {
+        std::cout << "Problem removing at position " << position << std::endl;
+    }
+    
+    attempt = deleteFromNode( position+1, remoteFile );
+    //if(attempt)
+        //return;
+    
+    attempt = deleteFromNode( position+2, remoteFile );
+    //if(attempt)
+        //return;
+
+
+    //std::string destAddress = "localhost";
+    //put(destAddress, localFile, remoteFile);
+}
+
 void FileSystem::listeningThread()
 { 
     int listenFd = open_socket(port); 
@@ -152,6 +187,10 @@ void FileSystem::listeningThread()
             write(connFd, buffer, msg.size);
 
             delete buffer;
+        }
+        if(msg.type == MSG_DELETE)
+        {
+            deleteFile(filename);
         }
         if(msg.type == MSG_PULL_CP || msg.type == MSG_PULL_MV){
             sendFileByRange(connFd, msg);
@@ -351,6 +390,39 @@ bool FileSystem::putToAddress(std::string address, std::string localFile, std::s
     }   
 }
 
+
+bool FileSystem::deleteFromAddress(std::string address, std::string remoteFile)
+{
+    int connectionToServer; //TCP connect to introducer/other nodes
+
+    // printf("Local file: %s\n", localFile.c_str());
+    // printf("Remote file: %s\n", remoteFile.c_str());
+
+    logFile << "Deleting -  Connecting to "<< address << "..." << std::endl;
+
+    int ret = connect_to_server(address.c_str(), port, &connectionToServer);
+    if(ret!=0)
+    {
+        logFile <<"ERROR putToAddress: Cannot connect to "<<address<< std::endl;
+        std::cout <<"ERROR putToAddress: Cannot connect to "<<address<< std::endl;
+        return false;
+    }
+    else{
+
+        Message_fs msg;
+        msg.type = MSG_DELETE;
+
+        memset(msg.filename, '\0', 200);
+        remoteFile.copy(msg.filename, remoteFile.length());
+        msg.filename[remoteFile.length()+1] = '\0';
+        msg.size = 0;
+
+        write(connectionToServer, &msg, sizeof(Message_fs) );   
+
+        close(connectionToServer);
+        return true;
+    }   
+}
 bool FileSystem::getFromAddress(std::string address, std::string localFile, std::string remoteFile)
 {
     int connectionToServer; //TCP connect to introducer/other nodes
@@ -539,9 +611,9 @@ int FileSystem::deleteFromVirtualRing( Node n ){
 
 void FileSystem::printVirtualRing(){
     virtualRingLock.lock();
-    std::cout<<"myself: "<<myself.ip_str<<" "<<myself.key<<std::endl;
+    std::cout<< "myself: " << myself.ip_str << " " << myself.key<<std::endl;
     for(int i=0; i < virtualRing.size(); i++){
-        std::cout<<virtualRing[i].ip_str<<" "<<virtualRing[i].key<<std::endl;
+        std::cout << virtualRing[i].ip_str << " " << virtualRing[i].key << std::endl;
     }
     std::cout<<std::endl;
     virtualRingLock.unlock();
@@ -690,6 +762,6 @@ void FileSystem::updateThread(){
             else
                 myselfLeave( msg.node );
         }
-        // printVirtualRing();
+        //printVirtualRing();
     }
 }

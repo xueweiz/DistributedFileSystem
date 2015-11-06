@@ -88,9 +88,11 @@ private:
 
 	bool putToNode(int nodePosition, std::string localFile, std::string remoteFile);
 	bool getFromNode(int nodePosition, std::string localFile, std::string remoteFile);
+	bool deleteFromNode(int nodePosition, std::string remoteFile);
 
 	bool putToAddress(std::string address, std::string localFile, std::string remoteFile);
 	bool getFromAddress(std::string address, std::string localFile, std::string remoteFile);
+	bool deleteFromAddress(std::string address, std::string remoteFile);
 
 	//bool getFromSocket(int connectionToServer, std::string localFile, std::string remoteFile);
 	
@@ -111,7 +113,7 @@ private:
 	int addToVirtualRing( Node n );
 	//delete the leaving node&hash to virtual ring, update myPosition. return the relative position to new node 
 	int deleteFromVirtualRing( Node n );
-	void printVirtualRing();
+
 	VirtualNode nNodeBefore(int n, int current);
 	VirtualNode nNodeLater(int n, int current);
 
@@ -152,6 +154,10 @@ public:
 
 	void put(std::string localFile, std::string remoteFile);
 	void get(std::string localFile, std::string remoteFile);
+
+	void printVirtualRing();
+
+	void deleteFromFS(std::string remoteFile);
 
 };
 
