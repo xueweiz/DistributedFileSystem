@@ -88,7 +88,7 @@ void listeningCin(Membership* m, FileSystem* fs)
 int main (int argc, char* argv[])
 {
     srand (time(NULL));
-    std::cout << std::endl << "CS425 - MP2: Membership Protocol." ;
+    std::cout << std::endl << "CS425 - MP3: Distributed File System" ;
     std::cout << std::endl << std::endl;
 
     logFile.open("log.log");

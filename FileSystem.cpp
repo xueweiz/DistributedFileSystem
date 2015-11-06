@@ -56,7 +56,8 @@ int FileSystem::findPositionByKey( int key ){
     return position;
 }
 
-bool FileSystem::putToNode(int nodePosition, std::string localFile, std::string remoteFile){
+bool FileSystem::putToNode(int nodePosition, std::string localFile, std::string remoteFile)
+{
     nodePosition = ( nodePosition + virtualRing.size() ) % virtualRing.size();
     std::string destAddress = virtualRing[nodePosition].ip_str;    
     return putToAddress(destAddress, localFile, remoteFile);
@@ -316,8 +317,13 @@ bool FileSystem::putToAddress(std::string address, std::string localFile, std::s
 
         Message_fs msg;
         msg.type = MSG_PUT;
+
+        memset(msg.filename, '\0', 200);
         remoteFile.copy(msg.filename, remoteFile.length());
-        msg.size = length;
+        msg.filename[remoteFile.length()+1] = '\0';
+        msg.size = length+1;
+        std::string test = msg.filename;
+        std::cout << "test: :" << test << std::endl;
 
         write(connectionToServer, &msg, sizeof(Message_fs) );
         write(connectionToServer, buffer, length);     
