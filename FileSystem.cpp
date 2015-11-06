@@ -106,7 +106,7 @@ void FileSystem::get(std::string localFile, std::string remoteFile){
     //https://gitlab-beta.engr.illinois.edu/remis2/MP3-FileSystem.git
     // hashing function to find the machine where to ask for the file;
 
-    int fileKey = hashString(localFile);
+    int fileKey = hashString(remoteFile);
     int position = findPositionByKey(fileKey);
 
     cout<<"get "<<localFile<<" "<<fileKey<<" from "<<position<<" "<<virtualRing[position].ip_str<<" "<<virtualRing[position].key<<endl;
@@ -185,6 +185,7 @@ void FileSystem::listeningThread()
             msg.size = readFile(filename, &buffer);
             write(connFd, &msg, sizeof(Message_fs));
             write(connFd, buffer, msg.size);
+            std::cout << "Get done" << std::endl;
 
             delete buffer;
         }
@@ -248,6 +249,7 @@ bool FileSystem::sendFileByRange(int connFd, Message_fs msg )
             std::cout << "for second write " << msg.size << std::endl;
             write(connFd, buffer, msg.size);
             std::cout << "second write " << std::endl;
+
             // THERE IS BUG HERE!
 
             delete buffer;
