@@ -101,6 +101,56 @@ void FileSystem::put(std::string localFile, std::string remoteFile)
     //std::string destAddress = "localhost";
     //put(destAddress, localFile, remoteFile);
 }
+void FileSystem::where(std::string remoteFile)
+{    
+    int fileKey = hashString(remoteFile);
+    int position = findPositionByKey(fileKey);
+
+    std::cout<< "Master Replica: " << virtualRing[position].ip_str << std::endl;
+    std::cout<< "Second Replica: " << virtualRing[ (position+1) % virtualRing.size()].ip_str << std::endl;
+    std::cout<< "Second Replica: " << virtualRing[ (position+2) % virtualRing.size()].ip_str << std::endl;
+}
+
+void FileSystem::checkFiles()
+{
+    // hashing function to find the machine/s where to store the file;
+    
+    std::vector<std::string> toremove;
+
+    filesLock.lock();
+
+    for ( auto &file : files)
+    {
+        int flag = false;
+        for (int i = 0; i < 3; ++i)
+        {
+            int position = findPositionByKey( hashString(file.filename) ) + i;
+            int nodePosition = ( position + virtualRing.size() ) % virtualRing.size();
+
+            if (virtualRing[nodePosition].key == myself.key)
+            {
+                flag = true;
+            }
+        }
+
+        if (!flag)
+        {
+            toremove.push_back(file.filename);
+        }
+    }
+
+    for (int i = 0; i < toremove.size(); ++i)
+    {
+        if ( deleteFile( toremove.at(i) ) ) 
+        {
+            logFile << toremove.at(i) << "deleted" << std::endl;
+        }
+        files.remove(toremove.at(i));
+    }
+
+    filesLock.unlock();
+
+}
 
 void FileSystem::get(std::string localFile, std::string remoteFile){
     //https://gitlab-beta.engr.illinois.edu/remis2/MP3-FileSystem.git
@@ -319,6 +369,8 @@ bool FileSystem::saveFile(std::string filename, char* buffer, size_t length)
 std::string FileSystem::getFileList()
 {
     std::stringstream ss;
+
+    //checkFiles();
 
     filesLock.lock();
     for (std::list<FileEntry>::iterator it=files.begin(); it != files.end(); ++it)
@@ -777,6 +829,7 @@ void FileSystem::updateThread(){
     myself.key = hashString( myself.ip_str );
 
     while(true){
+
         MemberUpdateMsg msg = membership.pullMsgFromFileSysQueue();
         
         if(msg.type == MSG_JOIN){

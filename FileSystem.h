@@ -127,7 +127,7 @@ private:
 
 	void updateThread();
 
-	
+	void checkFiles();
 
 
 public: 
@@ -158,6 +158,7 @@ public:
 	void printVirtualRing();
 
 	void deleteFromFS(std::string remoteFile);
+	void where(std::string remoteFile);
 
 };
 

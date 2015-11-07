@@ -47,7 +47,7 @@ void listeningCin(Membership* m, FileSystem* fs)
             std::cout << "Exiting normally " << std::endl;
             break;
         }
-        else if (input.compare("clear") == 0)
+        else if (input.compare("clear") == 0 || input.compare("c") == 0)
         {
             system("clear");
         }
@@ -100,7 +100,13 @@ void listeningCin(Membership* m, FileSystem* fs)
             std::cin >> remotefile;
             fs->deleteFromFS(remotefile);
         }
-        else if (input.compare("stored") == 0)
+        else if (input.compare("list") == 0)
+        {
+            std::string remotefile;
+            std::cin >> remotefile;
+            fs->where(remotefile);
+        }
+        else if (input.compare("stored") == 0 || input.compare("s") == 0)
         {
             std::cout << "Local Files List: " << std::endl;
             std::cout << fs->getFileList() << std::endl;
