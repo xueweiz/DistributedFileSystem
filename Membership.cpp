@@ -1071,6 +1071,7 @@ void Membership::pushMsgToFileSysQueue(MemberUpdateMsg msg){
     this->fileSysMsgQueue.push_back(msg);
 
     this->fileSysMsgQueueCV.notify_all();
+    usleep(5000);
 }
 
 MemberUpdateMsg Membership::pullMsgFromFileSysQueue(){

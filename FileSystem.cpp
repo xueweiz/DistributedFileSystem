@@ -236,7 +236,7 @@ void FileSystem::listeningThread()
             write(connFd, &msg, sizeof(Message_fs));
             //ret = write(connFd, buffer, msg.size);
             ret = splitWrite( connFd, buffer, msg.size );
-            std::cout << "Get done: "<< ret << std::endl;
+            // std::cout << "Get done: "<< ret << std::endl;
 
             delete buffer;
         }
@@ -370,7 +370,7 @@ std::string FileSystem::getFileList()
 {
     std::stringstream ss;
 
-    //checkFiles();
+    checkFiles();
 
     filesLock.lock();
     for (std::list<FileEntry>::iterator it=files.begin(); it != files.end(); ++it)
@@ -453,7 +453,7 @@ bool FileSystem::putToAddress(std::string address, std::string localFile, std::s
         memset(msg.filename, '\0', 200);
         remoteFile.copy(msg.filename, remoteFile.length());
         msg.filename[remoteFile.length()+1] = '\0';
-        msg.size = length+1;
+        msg.size = length;
         //std::string test = msg.filename;
         //std::cout << "test: :" << test << std::endl;
 
