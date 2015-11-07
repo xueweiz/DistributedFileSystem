@@ -234,11 +234,16 @@ void FileSystem::listeningThread()
         {
             msg.size = readFile(filename, &buffer);
             write(connFd, &msg, sizeof(Message_fs));
-            //ret = write(connFd, buffer, msg.size);
-            ret = splitWrite( connFd, buffer, msg.size );
-            // std::cout << "Get done: "<< ret << std::endl;
 
-            delete buffer;
+            if (msg.size == 0)
+            {
+                std::cout << "File does not exist" << std::endl;
+            }
+            else
+            {
+                ret = splitWrite( connFd, buffer, msg.size );
+                delete buffer;    
+            }
         }
         if(msg.type == MSG_DELETE)
         {
@@ -522,25 +527,32 @@ bool FileSystem::getFromAddress(std::string address, std::string localFile, std:
         write(connectionToServer, &msg, sizeof(Message_fs)); // Send filename
         read (connectionToServer, &msg, sizeof(Message_fs)); // Receive size
 
-        char * buffer = new char [msg.size];
-
-        //size_t ret = read(connectionToServer, buffer,  msg.size);
-        size_t ret =splitRead( connectionToServer, buffer, msg.size );
-        // std::cout << "getFromAddress: Received: " << ret <<" of "<<msg.size << std::endl;
-
-        std::ofstream file(localFile, std::ofstream::binary);
-
-        if (!file.good())
+        if (msg.size == 0)
         {
-            std::cout << "Could not open file: " << localFile << std::endl;
-            logFile << "Could not open file: " << localFile << std::endl;
-            return false;
+            std::cout << "File does not exist: " << remoteFile << std::endl;
         }
+        else
+        {
+            char * buffer = new char [msg.size];
 
-        file.write(buffer, msg.size); 
-        file.close();  
+            //size_t ret = read(connectionToServer, buffer,  msg.size);
+            size_t ret =splitRead( connectionToServer, buffer, msg.size );
+            // std::cout << "getFromAddress: Received: " << ret <<" of "<<msg.size << std::endl;
 
-        delete buffer;
+            std::ofstream file(localFile, std::ofstream::binary);
+
+            if (!file.good())
+            {
+                std::cout << "Could not open file: " << localFile << std::endl;
+                logFile << "Could not open file: " << localFile << std::endl;
+                return false;
+            }
+
+            file.write(buffer, msg.size); 
+            file.close();  
+
+            delete buffer;
+        }
 
         close(connectionToServer);
         return true;
