@@ -161,7 +161,7 @@ void FileSystem::listeningThread()
 
     while(true)
     {
-        int ret;
+        size_t ret;
         int connFd = listen_socket(listenFd);
 
         logFile<<"listeningThread: someone is contacting me... "<< std::endl;
@@ -184,8 +184,9 @@ void FileSystem::listeningThread()
         {
             msg.size = readFile(filename, &buffer);
             write(connFd, &msg, sizeof(Message_fs));
-            write(connFd, buffer, msg.size);
-            std::cout << "Get done" << std::endl;
+            //ret = write(connFd, buffer, msg.size);
+            ret = splitWrite( connFd, buffer, msg.size );
+            std::cout << "Get done: "<< ret << std::endl;
 
             delete buffer;
         }
@@ -247,7 +248,8 @@ bool FileSystem::sendFileByRange(int connFd, Message_fs msg )
             write(connFd, &msg, sizeof(Message_fs));
             std::cout << "first write " << std::endl;
             std::cout << "for second write " << msg.size << std::endl;
-            write(connFd, buffer, msg.size);
+            //write(connFd, buffer, msg.size);
+            splitWrite(connFd, buffer, msg.size);
             std::cout << "second write " << std::endl;
 
             // THERE IS BUG HERE!
@@ -287,6 +289,19 @@ bool FileSystem::deleteFile( std::string  filename ){
 //Internal for the file system
 bool FileSystem::saveFile(std::string filename, char* buffer, size_t length)
 {
+    bool alreadyThere = false;
+    filesLock.lock();  
+    for(auto &file : files){
+        if(file.filename.compare(filename) == 0){
+            alreadyThere = true;
+            break;
+        }
+    }
+    filesLock.unlock();
+
+    if(alreadyThere)
+        return true;
+
     std::string root = "files/";
     std::ofstream newfile(root + filename, std::ofstream::binary);
 
@@ -322,7 +337,7 @@ std::string FileSystem::getFileList()
 }
 
 //Internal for the filesystem
-int FileSystem::readFile(std::string filename, char** buffer)
+size_t FileSystem::readFile(std::string filename, char** buffer)
 {
     std::string root = "files/";
     std::ifstream file(root + filename, std::ifstream::binary);
@@ -335,7 +350,7 @@ int FileSystem::readFile(std::string filename, char** buffer)
     }
 
     file.seekg (0, file.end);
-    int length = file.tellg();
+    size_t length = file.tellg();
     file.seekg (0, file.beg);        
 
     *buffer = new char [length];
@@ -463,8 +478,9 @@ bool FileSystem::getFromAddress(std::string address, std::string localFile, std:
 
         char * buffer = new char [msg.size];
 
-        read(connectionToServer, buffer,  msg.size);
-        //std::cout << "Received : " << msg.size << std::endl;
+        //size_t ret = read(connectionToServer, buffer,  msg.size);
+        size_t ret =splitRead( connectionToServer, buffer, msg.size );
+        std::cout << "getFromAddress: Received: " << ret <<" of "<<msg.size << std::endl;
 
         std::ofstream file(localFile, std::ofstream::binary);
 
@@ -532,6 +548,7 @@ bool FileSystem::pullFileFromRange( std::string address, int minKey, int maxKey,
     int connectionToServer; //TCP connect to introducer/other nodes
 
     logFile << "pullFileFromRange: Connecting to "<< address << "..." << std::endl;
+    cout << "pullFileFromRange: Connecting to "<< address << "..." << std::endl;
 
     int ret = connect_to_server(address.c_str(), port, &connectionToServer);
     if(ret!=0)
@@ -559,7 +576,9 @@ bool FileSystem::pullFileFromRange( std::string address, int minKey, int maxKey,
         std::string filename(msg.filename);
 
         char * buffer = new char [msg.size];
-        read(connectionToServer, buffer,  msg.size);        
+        //size_t pullReadRet = read(connectionToServer, buffer,  msg.size);
+        size_t pullReadRet = splitRead(connectionToServer, buffer,  msg.size);
+        cout<<"pullFileFromRange: pullReadRet "<<pullReadRet<<endl;
 
         saveFile( filename, buffer, msg.size );
 

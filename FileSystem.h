@@ -97,7 +97,7 @@ private:
 	//bool getFromSocket(int connectionToServer, std::string localFile, std::string remoteFile);
 	
 	bool saveFile(std::string filename, char* buffer, size_t length);
-	int  readFile(std::string filename, char** buffer);
+	size_t  readFile(std::string filename, char** buffer);
 	bool deleteFile( std::string  filename );
 
 	void pull(std::string address, std::string filename);
