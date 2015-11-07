@@ -225,6 +225,7 @@ bool FileSystem::sendFileByRange(int connFd, Message_fs msg )
 {
     bool deleteMyCopy = ( (msg.type == MSG_PULL_MV) ? true : false );
 
+    std::vector<std::string> toremove;
     filesLock.lock();
     size_t count = 0;
     for( auto &file : files ){
@@ -240,42 +241,35 @@ bool FileSystem::sendFileByRange(int connFd, Message_fs msg )
             memset(msg.filename, '\0', 200);
             file.filename.copy(msg.filename, file.filename.length() );
 
-            cout<<"sendFileByRange: "<<file.filename<<" "<<msg.filename<<endl;
+            // cout<<"sendFileByRange: "<<file.filename<<" "<<msg.filename<<endl;
 
             char * buffer; 
             msg.size = readFile(file.filename, &buffer);
 
             write(connFd, &msg, sizeof(Message_fs));
-            std::cout << "first write " << std::endl;
-            std::cout << "for second write " << msg.size << std::endl;
-            //write(connFd, buffer, msg.size);
             splitWrite(connFd, buffer, msg.size);
-            std::cout << "second write " << std::endl;
-
-            // THERE IS BUG HERE!
 
             delete buffer;
 
-            std::cout << "buffer deleted " << std::endl;
-
             if(deleteMyCopy)
             {
-                std::cout << "deleting the copy" << std::endl;
-                files.remove( file );   //maintain file list
-
-                // THIS IS A BUG!!!!
-                
-                if ( deleteFile( file.filename ) ) 
-                {
-                    std::cout << file.filename << "deleted" << std::endl;
-                }
+                //files.remove( file );   //maintain file list
+                toremove.push_back(file.filename);
             }
         }
     }
 
+    for (int i = 0; i < toremove.size(); ++i)
+    {
+        if ( deleteFile( toremove.at(i) ) ) 
+        {
+            logFile << toremove.at(i) << "deleted" << std::endl;
+        }
+        files.remove(toremove.at(i));
+    }
+
     filesLock.unlock();
 
-    std::cout << "Returning from sendFileByRange" << std::endl;
     return true;
 }
 
@@ -359,7 +353,7 @@ size_t FileSystem::readFile(std::string filename, char** buffer)
     file.close();
 
     logFile << "readFile " << root + filename << " read" << std::endl;
-    std::cout << "readFile " << root + filename << " read" << std::endl;
+    // std::cout << "readFile " << root + filename << " read" << std::endl;
 
     return length;
 }
@@ -480,7 +474,7 @@ bool FileSystem::getFromAddress(std::string address, std::string localFile, std:
 
         //size_t ret = read(connectionToServer, buffer,  msg.size);
         size_t ret =splitRead( connectionToServer, buffer, msg.size );
-        std::cout << "getFromAddress: Received: " << ret <<" of "<<msg.size << std::endl;
+        // std::cout << "getFromAddress: Received: " << ret <<" of "<<msg.size << std::endl;
 
         std::ofstream file(localFile, std::ofstream::binary);
 
@@ -548,7 +542,7 @@ bool FileSystem::pullFileFromRange( std::string address, int minKey, int maxKey,
     int connectionToServer; //TCP connect to introducer/other nodes
 
     logFile << "pullFileFromRange: Connecting to "<< address << "..." << std::endl;
-    cout << "pullFileFromRange: Connecting to "<< address << "..." << std::endl;
+    // cout << "pullFileFromRange: Connecting to "<< address << "..." << std::endl;
 
     int ret = connect_to_server(address.c_str(), port, &connectionToServer);
     if(ret!=0)
@@ -578,7 +572,7 @@ bool FileSystem::pullFileFromRange( std::string address, int minKey, int maxKey,
         char * buffer = new char [msg.size];
         //size_t pullReadRet = read(connectionToServer, buffer,  msg.size);
         size_t pullReadRet = splitRead(connectionToServer, buffer,  msg.size);
-        cout<<"pullFileFromRange: pullReadRet "<<pullReadRet<<endl;
+        // cout<<"pullFileFromRange: pullReadRet "<<pullReadRet<<endl;
 
         saveFile( filename, buffer, msg.size );
 
@@ -644,11 +638,15 @@ int FileSystem::deleteFromVirtualRing( Node n ){
     return positionClock;
 }
 
-void FileSystem::printVirtualRing(){
+void FileSystem::printVirtualRing()
+{
     virtualRingLock.lock();
-    std::cout<< "myself: " << myself.ip_str << " " << myself.key<<std::endl;
-    for(int i=0; i < virtualRing.size(); i++){
-        std::cout << virtualRing[i].ip_str << " " << virtualRing[i].key << std::endl;
+    for(int i=0; i < virtualRing.size(); i++)
+    {
+        std::cout << virtualRing[i].ip_str << " " << virtualRing[i].key;
+        if (virtualRing[i].key == myself.key)
+            std::cout << " X ";
+        std::cout << std::endl;
     }
     std::cout<<std::endl;
     virtualRingLock.unlock();
@@ -665,28 +663,26 @@ bool FileSystem::myJoinFinished( ){
     if(target != myself ){
         minKey = nNodeBefore(1, myPosition).key;
         maxKey = nNodeBefore(0, myPosition).key;
-        success = pullFileFromRange(  target.ip_str, minKey, maxKey, false);
-        cout<<success<<" pull key from "<<minKey<<" to "<<maxKey<<" from "<<target.ip_str<<" "<<target.key<<endl;
+        success = pullFileFromRange(  target.ip_str, minKey, maxKey, true);
+        // cout<<success<<" pull key from "<<minKey<<" to "<<maxKey<<" from "<<target.ip_str<<" "<<target.key<<endl;
     }
     
-
     target = nNodeLater(2, myPosition);
     if(target != myself ){
         minKey = nNodeBefore(2, myPosition).key;
         maxKey = nNodeBefore(1, myPosition).key;
-        success = pullFileFromRange(  target.ip_str, minKey, maxKey, false);
-        cout<<success<<" pull key from "<<minKey<<" to "<<maxKey<<" from "<<target.ip_str<<" "<<target.key<<endl;
+        success = pullFileFromRange(  target.ip_str, minKey, maxKey, true);
+        // cout<<success<<" pull key from "<<minKey<<" to "<<maxKey<<" from "<<target.ip_str<<" "<<target.key<<endl;
     }
 
     target = nNodeLater(1, myPosition);
     if(target != myself ){
         minKey = nNodeBefore(3, myPosition).key;
         maxKey = nNodeBefore(2, myPosition).key;
-        success = pullFileFromRange(  target.ip_str, minKey, maxKey, false);
-        cout<<success<<" pull key from "<<minKey<<" to "<<maxKey<<" from "<<target.ip_str<<" "<<target.key<<endl;
+        success = pullFileFromRange(  target.ip_str, minKey, maxKey, true);
+        // cout<<success<<" pull key from "<<minKey<<" to "<<maxKey<<" from "<<target.ip_str<<" "<<target.key<<endl;
     }
 
-    
     virtualRingLock.unlock();
 
     return success;
@@ -698,7 +694,8 @@ bool FileSystem::detectJoin( Node joinNode ){
     return true;
 }
 
-FileSystem::VirtualNode FileSystem::nNodeBefore(int n, int current){
+FileSystem::VirtualNode FileSystem::nNodeBefore(int n, int current)
+{
     int position = current - n;
     while(position < 0)
         position += virtualRing.size();
@@ -708,7 +705,8 @@ FileSystem::VirtualNode FileSystem::nNodeBefore(int n, int current){
     return virtualRing[position];
 }
 
-FileSystem::VirtualNode FileSystem::nNodeLater(int n, int current){
+FileSystem::VirtualNode FileSystem::nNodeLater(int n, int current)
+{
     int position = current + n;
     while(position < 0)
         position += virtualRing.size();
@@ -718,13 +716,14 @@ FileSystem::VirtualNode FileSystem::nNodeLater(int n, int current){
     return virtualRing[position];
 }
 
-bool FileSystem::detectLeave( Node leaveNode ){    
+bool FileSystem::detectLeave( Node leaveNode )
+{    
     int positionClock = deleteFromVirtualRing( leaveNode );
     
     virtualRingLock.lock();
     int positionAntiClock = virtualRing.size() + 1 - positionClock;
 
-    cout<<"node "<< leaveNode.ip_str<<" leaving "<<positionAntiClock<<" before me."<<endl;
+    // cout<<"node "<< leaveNode.ip_str<<" leaving "<<positionAntiClock<<" before me."<<endl;
     bool success = false;
 
     int minKey, maxKey;
@@ -733,27 +732,27 @@ bool FileSystem::detectLeave( Node leaveNode ){
         minKey = nNodeBefore(3, myPosition).key;
         maxKey = hashString(leaveNode.ip_str);
         success = pullFileFromRange(  target.ip_str, minKey, maxKey, false);
-        cout<<success<<" pull key from "<<minKey<<" to "<<maxKey<<" from "<<target.ip_str<<" "<<target.key<<endl;    
+        // cout<<success<<" pull key from "<<minKey<<" to "<<maxKey<<" from "<<target.ip_str<<" "<<target.key<<endl;    
     }
     else if( positionAntiClock == 2 ){
         VirtualNode target = nNodeBefore(1, myPosition);
         minKey = nNodeBefore(3, myPosition).key;
         maxKey = nNodeBefore(2, myPosition).key;
         success = pullFileFromRange(  target.ip_str, minKey, maxKey, false);   
-        cout<<success<<" pull key from "<<minKey<<" to "<<maxKey<<" from "<<target.ip_str<<" "<<target.key<<endl;
+        // cout<<success<<" pull key from "<<minKey<<" to "<<maxKey<<" from "<<target.ip_str<<" "<<target.key<<endl;
     }
     else if( positionAntiClock == 1 ){
         VirtualNode target = nNodeBefore(1, myPosition);
         minKey = nNodeBefore(3, myPosition).key;
         maxKey = nNodeBefore(2, myPosition).key;
         success = pullFileFromRange(  target.ip_str, minKey, maxKey, false);
-        cout<<success<<" pull key from "<<minKey<<" to "<<maxKey<<" from "<<target.ip_str<<" "<<target.key<<endl;
+        // cout<<success<<" pull key from "<<minKey<<" to "<<maxKey<<" from "<<target.ip_str<<" "<<target.key<<endl;
     }
 
     if(!success){
         VirtualNode target = nNodeBefore(2, myPosition);
         success = pullFileFromRange(  target.ip_str, minKey, maxKey, false);
-        cout<<success<<" pull key second from "<<minKey<<" to "<<maxKey<<" from "<<target.ip_str<<" "<<target.key<<endl;
+        // cout<<success<<" pull key second from "<<minKey<<" to "<<maxKey<<" from "<<target.ip_str<<" "<<target.key<<endl;
     }
 
     virtualRingLock.unlock();

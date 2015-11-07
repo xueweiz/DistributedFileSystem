@@ -103,7 +103,7 @@ int bindSocket(int port)
         std::cout << "open_socket: Cannot bind" << std::endl;
         exit(1);
     }
-    printf("UDP Listening at port %d...\n", port);
+    // printf("UDP Listening at port %d...\n", port);
 
     return sockfd;
 }
@@ -206,7 +206,7 @@ int open_socket(int port)
         std::cout << "open_socket: Cannot bind" << std::endl;
         exit(1);
     }
-    printf("TCP Listening at port %d...\n", port);
+    // printf("TCP Listening at port %d...\n", port);
 
     return listenFd;
 }

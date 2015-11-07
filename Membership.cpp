@@ -157,7 +157,7 @@ bool Membership::firstJoin()
     for(int i=0; (i < nodes.size()) /*&& !joined*/ ; i++){
         int connectionToServer;
         //TCP connect to introducer/other nodes
-        std::cout<<"Join: Connecting to "<< nodes[i].ip_str << "..." << std::endl;
+        logFile <<"Join: Connecting to "<< nodes[i].ip_str << "..." << std::endl;
 
         int ret = connect_to_server(nodes[i].ip_str.c_str(), port + 1, &connectionToServer);
         if(ret!=0)
@@ -678,7 +678,7 @@ bool Membership::isBiggerThanMine(std::string other, std::string mine)
 		}
 	}
 	
-	std::cout << "comparing with myself: this code sucks!" << std::endl;
+	logFile << "comparing with myself: this code sucks!" << std::endl;
 	return false;
 }
 
