@@ -280,12 +280,14 @@ bool inRange(int key, int min, int max){
     if(min < max)
         return (min<key && key<=max);
     else
-        return ( (0 <= key && key <= min) || (max < key && key <= RING_SIZE)  );
+        return ( (0 <= key && key <= max) || (min < key && key <= RING_SIZE)  );
 }
 
 bool FileSystem::sendFileByRange(int connFd, Message_fs msg )
 {
     bool deleteMyCopy = ( (msg.type == MSG_PULL_MV) ? true : false );
+
+    logFile<<"sendFileByRange: "<<msg.minKey<<" to "<<msg.maxKey<<endl;
 
     std::vector<std::string> toremove;
     filesLock.lock();
@@ -304,6 +306,7 @@ bool FileSystem::sendFileByRange(int connFd, Message_fs msg )
             file.filename.copy(msg.filename, file.filename.length() );
 
             // cout<<"sendFileByRange: "<<file.filename<<" "<<msg.filename<<endl;
+            logFile<<"sendFileByRange: "<<file.filename<<" rm:"<<deleteMyCopy<<endl;
 
             char * buffer; 
             msg.size = readFile(file.filename, &buffer);
@@ -613,7 +616,7 @@ bool FileSystem::VirtualNode::operator!=(VirtualNode const & second) const{
 bool FileSystem::pullFileFromRange( std::string address, int minKey, int maxKey, bool rmRemoteFile ){
     int connectionToServer; //TCP connect to introducer/other nodes
 
-    logFile << "pullFileFromRange: Connecting to "<< address << "..." << std::endl;
+    logFile << "pullFileFromRange: Connecting to "<< address << "... for"<< minKey <<" to "<<maxKey<<" rm:"<<rmRemoteFile << std::endl;
     // cout << "pullFileFromRange: Connecting to "<< address << "..." << std::endl;
 
     int ret = connect_to_server(address.c_str(), port, &connectionToServer);
@@ -737,6 +740,7 @@ bool FileSystem::myJoinFinished( ){
         maxKey = nNodeBefore(0, myPosition).key;
         success = pullFileFromRange(  target.ip_str, minKey, maxKey, true);
         // cout<<success<<" pull key from "<<minKey<<" to "<<maxKey<<" from "<<target.ip_str<<" "<<target.key<<endl;
+        logFile<<success<<" myJoinFinished pull key from "<<minKey<<" to "<<maxKey<<" from "<<target.ip_str<<" "<<target.key<<endl;
     }
     
     target = nNodeLater(2, myPosition);
@@ -745,6 +749,7 @@ bool FileSystem::myJoinFinished( ){
         maxKey = nNodeBefore(1, myPosition).key;
         success = pullFileFromRange(  target.ip_str, minKey, maxKey, true);
         // cout<<success<<" pull key from "<<minKey<<" to "<<maxKey<<" from "<<target.ip_str<<" "<<target.key<<endl;
+        logFile<<success<<" myJoinFinished pull key from "<<minKey<<" to "<<maxKey<<" from "<<target.ip_str<<" "<<target.key<<endl;
     }
 
     target = nNodeLater(1, myPosition);
@@ -753,6 +758,7 @@ bool FileSystem::myJoinFinished( ){
         maxKey = nNodeBefore(2, myPosition).key;
         success = pullFileFromRange(  target.ip_str, minKey, maxKey, true);
         // cout<<success<<" pull key from "<<minKey<<" to "<<maxKey<<" from "<<target.ip_str<<" "<<target.key<<endl;
+        logFile<<success<<" myJoinFinished pull key from "<<minKey<<" to "<<maxKey<<" from "<<target.ip_str<<" "<<target.key<<endl;
     }
 
     virtualRingLock.unlock();
@@ -805,6 +811,7 @@ bool FileSystem::detectLeave( Node leaveNode )
         maxKey = hashString(leaveNode.ip_str);
         success = pullFileFromRange(  target.ip_str, minKey, maxKey, false);
         // cout<<success<<" pull key from "<<minKey<<" to "<<maxKey<<" from "<<target.ip_str<<" "<<target.key<<endl;    
+        logFile<<success<<" detectLeave pull key from "<<minKey<<" to "<<maxKey<<" from "<<target.ip_str<<" "<<target.key<<endl;    
     }
     else if( positionAntiClock == 2 ){
         VirtualNode target = nNodeBefore(1, myPosition);
@@ -812,6 +819,7 @@ bool FileSystem::detectLeave( Node leaveNode )
         maxKey = nNodeBefore(2, myPosition).key;
         success = pullFileFromRange(  target.ip_str, minKey, maxKey, false);   
         // cout<<success<<" pull key from "<<minKey<<" to "<<maxKey<<" from "<<target.ip_str<<" "<<target.key<<endl;
+        logFile<<success<<" detectLeave pull key from "<<minKey<<" to "<<maxKey<<" from "<<target.ip_str<<" "<<target.key<<endl;    
     }
     else if( positionAntiClock == 1 ){
         VirtualNode target = nNodeBefore(1, myPosition);
@@ -819,12 +827,14 @@ bool FileSystem::detectLeave( Node leaveNode )
         maxKey = nNodeBefore(2, myPosition).key;
         success = pullFileFromRange(  target.ip_str, minKey, maxKey, false);
         // cout<<success<<" pull key from "<<minKey<<" to "<<maxKey<<" from "<<target.ip_str<<" "<<target.key<<endl;
+        logFile<<success<<" detectLeave pull key from "<<minKey<<" to "<<maxKey<<" from "<<target.ip_str<<" "<<target.key<<endl;    
     }
 
     if(!success){
         VirtualNode target = nNodeBefore(2, myPosition);
         success = pullFileFromRange(  target.ip_str, minKey, maxKey, false);
         // cout<<success<<" pull key second from "<<minKey<<" to "<<maxKey<<" from "<<target.ip_str<<" "<<target.key<<endl;
+        logFile<<success<<" detectLeave pull key from "<<minKey<<" to "<<maxKey<<" from "<<target.ip_str<<" "<<target.key<<endl;    
     }
 
     virtualRingLock.unlock();
