@@ -79,27 +79,24 @@ bool FileSystem::getFromNode(int nodePosition, std::string localFile, std::strin
 void FileSystem::put(std::string localFile, std::string remoteFile)
 {
     // hashing function to find the machine/s where to store the file;
+
+    ChronoCpu chrono("cpu");
     
+    chrono.tic();
     int fileKey = hashString(remoteFile);
     int position = findPositionByKey(fileKey);
 
-    cout<<"put "<<localFile<<" "<<fileKey<<" to "<<position<<" "<<virtualRing[position].ip_str<<" "<<virtualRing[position].key<<endl;
+    // cout<<"put "<<localFile<<" "<<fileKey<<" to "<<position<<" "<<virtualRing[position].ip_str<<" "<<virtualRing[position].key<<endl;
 
     bool attempt = putToNode( position, localFile, remoteFile );
-    //if(attempt)
-        //return;
     
     attempt = putToNode( position+1, localFile, remoteFile );
-    //if(attempt)
-        //return;
     
     attempt = putToNode( position+2, localFile, remoteFile );
-    //if(attempt)
-        //return;
 
+    chrono.tac();
 
-    //std::string destAddress = "localhost";
-    //put(destAddress, localFile, remoteFile);
+    std::cout << "File " << remoteFile << " added in " << chrono.getElapsedStats().lastTime_ms << " ms" << std::endl;
 }
 void FileSystem::where(std::string remoteFile)
 {    
@@ -152,29 +149,39 @@ void FileSystem::checkFiles()
 
 }
 
-void FileSystem::get(std::string localFile, std::string remoteFile){
+void FileSystem::get(std::string localFile, std::string remoteFile)
+{
     //https://gitlab-beta.engr.illinois.edu/remis2/MP3-FileSystem.git
     // hashing function to find the machine where to ask for the file;
+
+    ChronoCpu chrono("cpu");
+    
+    chrono.tic();
 
     int fileKey = hashString(remoteFile);
     int position = findPositionByKey(fileKey);
 
-    cout<<"get "<<localFile<<" "<<fileKey<<" from "<<position<<" "<<virtualRing[position].ip_str<<" "<<virtualRing[position].key<<endl;
+    // cout<<"get "<<localFile<<" "<<fileKey<<" from "<<position<<" "<<virtualRing[position].ip_str<<" "<<virtualRing[position].key<<endl;
 
     bool attempt = getFromNode( position, localFile, remoteFile );
-    if(attempt)
-        return;
-    
-    attempt = getFromNode( position+1, localFile, remoteFile );
-    if(attempt)
-        return;
-    
-    attempt = getFromNode( position+2, localFile, remoteFile );
-    if(attempt)
-        return;
+    if(!attempt)
+    {
+        std::cout << "Retrying... " << std::endl;
+        attempt = getFromNode( position+1, localFile, remoteFile );
+    }
+    if(!attempt)
+    {
+        std::cout << "Retrying... " << std::endl;
+        attempt = getFromNode( position+2, localFile, remoteFile );
+    }
 
-    //std::string destAddress = "localhost";
-    //get(destAddress, localFile, remoteFile);
+    if (!attempt)
+    {
+        std::cout << "Error retrieving " << remoteFile << std::endl;
+    }
+
+    chrono.tac();
+    std::cout << "File " << remoteFile << " received in " << chrono.getElapsedStats().lastTime_ms << " ms" << std::endl;
 }
 
 void FileSystem::deleteFromFS(std::string remoteFile)
@@ -184,7 +191,7 @@ void FileSystem::deleteFromFS(std::string remoteFile)
     int fileKey = hashString(remoteFile);
     int position = findPositionByKey(fileKey);
 
-    cout<<"delete " << fileKey << " from "<<position<<" "<<virtualRing[position].ip_str<<" "<<virtualRing[position].key<<endl;
+    // cout<<"delete " << fileKey << " from "<<position<<" "<<virtualRing[position].ip_str<<" "<<virtualRing[position].key<<endl;
 
     bool attempt = deleteFromNode( position, remoteFile );
     if( !attempt)
@@ -522,6 +529,7 @@ bool FileSystem::getFromAddress(std::string address, std::string localFile, std:
         
         Message_fs msg;
         msg.type = MSG_GET;
+        memset(msg.filename, '\0', 200);
         remoteFile.copy(msg.filename, remoteFile.length());
 
         write(connectionToServer, &msg, sizeof(Message_fs)); // Send filename
