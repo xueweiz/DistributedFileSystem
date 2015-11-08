@@ -181,7 +181,10 @@ void FileSystem::get(std::string localFile, std::string remoteFile)
     }
 
     chrono.tac();
-    std::cout << "File " << remoteFile << " received in " << chrono.getElapsedStats().lastTime_ms << " ms" << std::endl;
+    if(attempt)
+        std::cout << "File " << remoteFile << " received in " << chrono.getElapsedStats().lastTime_ms << " ms" << std::endl;
+    else
+        std::cout << "File " << remoteFile << " cannot be found. returning in " << chrono.getElapsedStats().lastTime_ms << " ms" << std::endl;
 }
 
 void FileSystem::deleteFromFS(std::string remoteFile)
@@ -541,6 +544,8 @@ bool FileSystem::getFromAddress(std::string address, std::string localFile, std:
         if (msg.size == 0)
         {
             std::cout << "File does not exist: " << remoteFile << std::endl;
+            close(connectionToServer);
+            return false;
         }
         else
         {
@@ -563,10 +568,10 @@ bool FileSystem::getFromAddress(std::string address, std::string localFile, std:
             file.close();  
 
             delete buffer;
-        }
 
-        close(connectionToServer);
-        return true;
+            close(connectionToServer);
+            return true;
+        }        
     }
 }
 
@@ -623,7 +628,7 @@ bool FileSystem::pullFileFromRange( std::string address, int minKey, int maxKey,
     if(ret!=0)
     {
         logFile <<"ERROR pullFileFromRange: Cannot connect to "<<address<< std::endl;
-        std::cout <<"ERROR pullFileFromRange: Cannot connect to "<<address<< std::endl;
+        //std::cout <<"ERROR pullFileFromRange: Cannot connect to "<<address<< std::endl;
         return false;
     }
 
